@@ -480,7 +480,6 @@ struct ChatComposerBar<Controls: View>: View {
         #if os(iOS)
         .hoverEffect()
         #endif
-        .keyboardShortcut(action == .stop ? nil : KeyboardShortcut(.return, modifiers: .command))
         .contentTransition(.symbolEffect(.replace))
         .disabled(action != .stop && (!canSend || !hasPayload || (!allowsAttachments && !attachments.isEmpty)))
         .accessibilityLabel(action.accessibilityLabel)
