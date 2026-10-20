@@ -109,6 +109,15 @@ struct HomeView: View {
                 if let openChat {
                     ConversationView(session: openChat.session, initialPrompt: openChat.prompt)
                         .id(openChat.id)
+                        // Compact pops back to the list's composer; wide has
+                        // no back, so this returns the column to it.
+                        .toolbar {
+                            if sizeClass == .regular {
+                                ToolbarItem(placement: .topBarLeading) {
+                                    Button("New chat", systemImage: "square.and.pencil") { self.openChat = nil }
+                                }
+                            }
+                        }
                 } else if page == .agent, store != nil, sizeClass == .regular {
                     Theme.chatCanvas.ignoresSafeArea()
                         .safeAreaInset(edge: .bottom, spacing: 0) {
