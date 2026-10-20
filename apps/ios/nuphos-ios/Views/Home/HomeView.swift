@@ -15,6 +15,8 @@ struct HomeView: View {
     @State private var plans: PlansStore?
     @State private var connectors: ConnectorsStore?
     @State private var openChat: AgentPage.OpenChat?
+    /// The window's, not a column's: a split view's columns report compact.
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     var body: some View {
         // Collapses to a single stack when compact; side by side when wide,
@@ -107,6 +109,11 @@ struct HomeView: View {
                 if let openChat {
                     ConversationView(session: openChat.session, initialPrompt: openChat.prompt)
                         .id(openChat.id)
+                } else if page == .agent, store != nil, sizeClass == .regular {
+                    Theme.chatCanvas.ignoresSafeArea()
+                        .safeAreaInset(edge: .bottom, spacing: 0) {
+                            NewChatComposer(openChat: $openChat).readableWidth()
+                        }
                 } else {
                     Theme.canvas.ignoresSafeArea()
                 }
@@ -160,7 +167,7 @@ struct HomeView: View {
     private var pageContent: some View {
         switch page {
         case .agent:
-            AgentPage(page: $page, isSearching: $isSearching, titleCollapsed: $titleCollapsed, openChat: $openChat)
+            AgentPage(page: $page, isSearching: $isSearching, titleCollapsed: $titleCollapsed, openChat: $openChat, showsComposer: sizeClass != .regular)
         case .plans:
             PlansPage(page: $page, isSearching: $isSearching, titleCollapsed: $titleCollapsed)
         case .connectors:
