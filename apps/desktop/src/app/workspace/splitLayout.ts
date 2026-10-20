@@ -65,9 +65,24 @@ export function dropZone(x: number, y: number): DropZone {
   return distance < 0.25 ? zone : 'center'
 }
 
+function hasPane(layout: SplitLayout, id: string): boolean {
+  return 'id' in layout ? layout.id === id : layout.children.some((child) => hasPane(child, id))
+}
+
+/** Exchanges two panes' places; the tree keeps its shape. */
+export function swapPanes(layout: SplitLayout, a: string, b: string): SplitLayout {
+  if ('id' in layout) {
+    if (layout.id === a) return { id: b }
+
+    return layout.id === b ? { id: a } : layout
+  }
+
+  return { ...layout, children: layout.children.map((child) => swapPanes(child, a, b)) }
+}
+
 /**
  * Places `id` on `zone`'s side of `target`, taking it out of its old spot
- * first; a new id splits `target`. The center leaves the layout alone.
+ * first; a new id splits `target`. The center swaps two panes already shown.
  */
 export function dropPane(
   layout: SplitLayout,
@@ -75,7 +90,8 @@ export function dropPane(
   id: string,
   zone: DropZone,
 ): SplitLayout {
-  if (id === target || zone === 'center') return layout
+  if (id === target) return layout
+  if (zone === 'center') return hasPane(layout, id) ? swapPanes(layout, target, id) : layout
   const rest = removePane(layout, id) ?? layout
 
   return splitPane(

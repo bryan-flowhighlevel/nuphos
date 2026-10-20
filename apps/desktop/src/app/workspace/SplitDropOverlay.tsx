@@ -1,3 +1,12 @@
+import { clsx } from 'clsx'
+import {
+  ArrowLeftRight,
+  PanelBottom,
+  PanelLeft,
+  PanelRight,
+  PanelTop,
+  SquareArrowDown,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { PANE_DRAG_TYPE, SESSION_DRAG_TYPE, dropZone } from './splitLayout'
@@ -10,7 +19,8 @@ type Seed = { sessionId: string; teamId?: string }
 
 /**
  * Covers the panes while a sidebar chat or a pane's grip is dragged, and shows
- * where it would land: an edge splits that side, the middle replaces the chat.
+ * where it would land: an edge splits that side, the middle swaps two panes
+ * or replaces the chat.
  * Other drags (files into the composer) never mount it.
  */
 export function SplitDropOverlay({
@@ -69,8 +79,8 @@ export function SplitDropOverlay({
     if (!rect) return null
     const zone = dropZone((x - rect.left) / rect.width, (y - rect.top) / rect.height)
 
-    // A pane only moves to another pane's edge.
-    if (drag.pane && (rect.id === drag.pane || zone === 'center')) return null
+    // A pane never drops on itself; its centre swaps with another pane.
+    if (drag.pane && rect.id === drag.pane) return null
 
     return { rect, zone }
   }
@@ -115,13 +125,68 @@ export function SplitDropOverlay({
         if (next) drop(next.rect.id, next.zone, event)
       }}
     >
-      {hover && (
-        <div
-          className="pointer-events-none absolute rounded-md border-2 border-zViolet-500/60 bg-zViolet-500/15 transition-all duration-100"
-          style={zoneStyle(hover.rect, hover.zone)}
-        />
-      )}
+      {drag.pane && <SourceVeil rect={rects.find((r) => r.id === drag.pane)} />}
+      {hover && <ZoneHint rect={hover.rect} zone={hover.zone} movingPane={drag.pane !== null} />}
     </div>
+  )
+}
+
+const EDGE_HINTS = {
+  left: { Icon: PanelLeft, text: 'Split left' },
+  right: { Icon: PanelRight, text: 'Split right' },
+  top: { Icon: PanelTop, text: 'Split up' },
+  bottom: { Icon: PanelBottom, text: 'Split down' },
+}
+
+function centreHint(movingPane: boolean) {
+  return movingPane
+    ? { Icon: ArrowLeftRight, text: 'Swap' }
+    : { Icon: SquareArrowDown, text: 'Open here' }
+}
+
+/** Blurs the pane under the pointer and labels what letting go will do there. */
+function ZoneHint({
+  rect,
+  zone,
+  movingPane,
+}: {
+  rect: PaneRect
+  zone: DropZone
+  movingPane: boolean
+}) {
+  const { Icon, text } = zone === 'center' ? centreHint(movingPane) : EDGE_HINTS[zone]
+
+  return (
+    <>
+      <div
+        className="pointer-events-none absolute bg-zGray-950/25 backdrop-blur-[3px] transition-opacity duration-150"
+        style={zoneStyle(rect, 'center')}
+      />
+      <div
+        className={clsx(
+          'pointer-events-none absolute flex items-center justify-center rounded-lg border border-zViolet-400/70 bg-zViolet-500/10 transition-all duration-150 ease-out',
+          zone === 'center' ? 'm-2' : 'm-1.5',
+        )}
+        style={zoneStyle(rect, zone)}
+      >
+        <span className="flex items-center gap-1.5 rounded-full border border-zGray-700 bg-elevated/95 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-main shadow-lg">
+          <Icon className="h-3.5 w-3.5 text-zViolet-300" strokeWidth={1.8} />
+          {text}
+        </span>
+      </div>
+    </>
+  )
+}
+
+/** The dragged pane steps back so the eye follows the drop target instead. */
+function SourceVeil({ rect }: { rect?: PaneRect }) {
+  if (!rect) return null
+
+  return (
+    <div
+      className="pointer-events-none absolute bg-zGray-950/40 transition-opacity duration-150"
+      style={zoneStyle(rect, 'center')}
+    />
   )
 }
 

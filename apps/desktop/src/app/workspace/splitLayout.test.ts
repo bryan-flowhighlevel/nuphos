@@ -126,3 +126,14 @@ test('moving a pane takes it out of its old spot and keeps every identity', () =
     children: [{ id: 'b' }, { id: 'a' }],
   })
 })
+
+test('dropping a pane on another pane centre swaps them in place', () => {
+  const layout = splitPane(splitPane({ id: 'a' }, 'a', 'b', 'row'), 'b', 'c', 'column')
+
+  assert.deepEqual(dropPane(layout, 'c', 'a', 'center'), {
+    direction: 'row',
+    children: [{ id: 'c' }, { direction: 'column', children: [{ id: 'b' }, { id: 'a' }] }],
+  })
+  // A chat that is not a pane yet never swaps in.
+  assert.equal(dropPane(layout, 'a', 'z', 'center'), layout)
+})
