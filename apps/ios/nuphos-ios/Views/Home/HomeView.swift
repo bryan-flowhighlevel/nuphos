@@ -14,9 +14,12 @@ struct HomeView: View {
     @State private var store: AgentStore?
     @State private var plans: PlansStore?
     @State private var connectors: ConnectorsStore?
+    @State private var openChat: AgentPage.OpenChat?
 
     var body: some View {
-        NavigationStack {
+        // Collapses to a single stack when compact; side by side when wide,
+        // such as iPhone Duo's inner display and iPad.
+        NavigationSplitView {
             Group {
                 if let store, let plans, let connectors {
                     pageContent
@@ -99,9 +102,18 @@ struct HomeView: View {
                 if CommandLine.arguments.contains("-preview-logos") { LogoPreviewGrid() }
             }
             #endif
+        } detail: {
+            NavigationStack {
+                if let openChat {
+                    ConversationView(session: openChat.session, initialPrompt: openChat.prompt)
+                        .id(openChat.id)
+                } else {
+                    Theme.canvas.ignoresSafeArea()
+                }
+            }
         }
-        // On the stack itself, so pushed destinations (ConversationView,
-        // DraftConversationView) see the store too — not only pageContent.
+        // On the split view itself, so the detail column and pushed
+        // destinations see the store too — not only pageContent.
         .environment(store)
         .environment(plans)
         .environment(connectors)
@@ -121,6 +133,7 @@ struct HomeView: View {
         }
         .onChange(of: page) { oldPage, newPage in
             isSearching = false
+            openChat = nil
             UIEventLog.pageTransition(from: oldPage.rawValue, to: newPage.rawValue)
             Analytics.shared.screen(newPage.rawValue, teamID: store?.selectedTeam?.id)
         }
@@ -147,7 +160,7 @@ struct HomeView: View {
     private var pageContent: some View {
         switch page {
         case .agent:
-            AgentPage(page: $page, isSearching: $isSearching, titleCollapsed: $titleCollapsed)
+            AgentPage(page: $page, isSearching: $isSearching, titleCollapsed: $titleCollapsed, openChat: $openChat)
         case .plans:
             PlansPage(page: $page, isSearching: $isSearching, titleCollapsed: $titleCollapsed)
         case .connectors:

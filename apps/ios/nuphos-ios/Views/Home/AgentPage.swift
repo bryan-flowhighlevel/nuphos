@@ -9,6 +9,8 @@ struct AgentPage: View {
     @Binding var isSearching: Bool
     /// True once the large header has scrolled under the bar.
     @Binding var titleCollapsed: Bool
+    /// The chat shown beside (or, when compact, on top of) the list.
+    @Binding var openChat: OpenChat?
 
     @State private var draft = ""
     /// Whether the keyboard on screen is this page's composer's.
@@ -19,21 +21,17 @@ struct AgentPage: View {
     /// `-preview-agent-login`: the authorization-code step with a canned attempt.
     @State private var previewLogin = false
     #endif
-    /// A chat started from the composer here.
-    @State private var newChat: NewChat?
-    /// DEBUG `-open-first-chat`: pushes the first conversation once loaded.
-    @State private var autoOpened: AgentConversation?
     #if DEBUG
     @State private var didHandleLaunchAction = false
     #endif
-    /// A chat opened from a tapped notification.
-    @State private var pushOpen: PushTarget?
 
-    struct NewChat: Identifiable, Hashable {
-        let id = UUID()
+    /// A chat to show, with the prompt a new one starts with. Keyed by
+    /// session id, so the list highlights its row once it is listed.
+    struct OpenChat: Identifiable, Hashable {
         let session: ChatSession
-        let prompt: ComposerSubmission
-        static func == (a: NewChat, b: NewChat) -> Bool { a.id == b.id }
+        var prompt: ComposerSubmission?
+        var id: String { session.sessionId }
+        static func == (a: OpenChat, b: OpenChat) -> Bool { a.id == b.id }
         func hash(into hasher: inout Hasher) { hasher.combine(id) }
     }
 
@@ -82,7 +80,7 @@ struct AgentPage: View {
                         return await store.mentionableSessions(teamId: draftTeam, excluding: nil, matching: query)
                     }
                 ), onSend: { submission in
-                    if let session = store.newSession() { newChat = NewChat(session: session, prompt: submission) }
+                    if let session = store.newSession() { openChat = OpenChat(session: session, prompt: submission) }
                 }) {
                     ComposerControls(selection: $store.credentialSelection, mode: $store.permissionMode, session: nil)
                 }
@@ -101,18 +99,6 @@ struct AgentPage: View {
             .onChange(of: draft) { _, text in
                 ComposerDrafts.set(text, team: draftTeam, session: "new")
             }
-            .navigationDestination(for: AgentConversation.self) { conversation in
-                ExistingConversationView(conversation: conversation)
-            }
-            .navigationDestination(item: $newChat) { chat in
-                ConversationView(session: chat.session, initialPrompt: chat.prompt)
-            }
-            .navigationDestination(item: $autoOpened) { conversation in
-                ExistingConversationView(conversation: conversation)
-            }
-            .navigationDestination(item: $pushOpen) { target in
-                PushedConversationView(target: target).id(target.id)
-            }
             .onChange(of: store.teamsPhase) { _, phase in if phase == .loaded { openPushTarget() } }
             .onChange(of: PushNotifications.shared.pendingTarget) { _, _ in openPushTarget() }
             .task {
@@ -128,7 +114,7 @@ struct AgentPage: View {
                 guard !didHandleLaunchAction, !Task.isCancelled else { return }
                 didHandleLaunchAction = true
                 if CommandLine.arguments.contains("-open-first-chat") {
-                    autoOpened = store.conversations.first
+                    openChat = store.conversations.first.map { OpenChat(session: store.session(for: $0)) }
                 }
                 if CommandLine.arguments.contains("-show-agent-setup") { showAgentSetup = true }
                 if CommandLine.arguments.contains("-preview-agent-login") { previewLogin = true }
@@ -168,13 +154,13 @@ struct AgentPage: View {
                     ])
                     earlier.createdAt = .now.addingTimeInterval(-90)
                     session.seedForPreview([.user("Where does the build cache live?"), earlier, .user("Clear the build cache please"), assistant])
-                    newChat = NewChat(session: session, prompt: ComposerSubmission(text: "", attachments: []))
+                    openChat = OpenChat(session: session)
                 }
                 // `-new-chat "<prompt>"`: start a conversation with that text.
                 let args = CommandLine.arguments
                 await store.loadCredentialOptions()
                 if let i = args.firstIndex(of: "-new-chat"), i + 1 < args.count, let session = store.newSession() {
-                    newChat = NewChat(session: session, prompt: ComposerSubmission(text: args[i + 1], attachments: []))
+                    openChat = OpenChat(session: session, prompt: ComposerSubmission(text: args[i + 1], attachments: []))
                 }
                 #endif
             }
@@ -184,7 +170,7 @@ struct AgentPage: View {
         guard let target = PushNotifications.shared.pendingTarget, store.teamsPhase == .loaded else { return }
         PushNotifications.shared.pendingTarget = nil
         if let team = store.teams.first(where: { $0.id == target.teamId }) { store.select(team: team) }
-        pushOpen = target
+        openChat = OpenChat(session: store.session(sessionId: target.sessionId, title: target.title, teamId: target.teamId))
     }
 
     @ViewBuilder
@@ -253,13 +239,23 @@ struct AgentPage: View {
         }
     }
 
+    /// The list's selection is the open chat's id; picking a row opens it.
+    private var selection: Binding<String?> {
+        Binding {
+            openChat?.id
+        } set: { id in
+            guard id != openChat?.id else { return }
+            openChat = store.listedConversations.first { $0.sessionId == id }.map { OpenChat(session: store.session(for: $0)) }
+        }
+    }
+
     private var list: some View {
-        List {
+        List(selection: selection) {
             Section {
                 ForEach(store.nestedConversations) { item in
                     let conversation = item.conversation
                     let folded = item.hasChildren && store.isFolded(conversation.sessionId)
-                    NavigationLink(value: conversation) {
+                    NavigationLink(value: conversation.sessionId) {
                         HStack(spacing: 0) {
                             ConversationRow(
                                 conversation: conversation, pinned: store.isPinned(conversation.sessionId), hidden: item.hidden
@@ -406,45 +402,7 @@ struct SearchBar: View {
     @Previewable @State var page = HomePage.agent
     @Previewable @State var collapsed = false
     NavigationStack {
-        AgentPage(page: $page, isSearching: $searching, titleCollapsed: $collapsed)
+        AgentPage(page: $page, isSearching: $searching, titleCollapsed: $collapsed, openChat: .constant(nil))
     }
     .environment(AgentStore(token: ""))
-}
-
-/// A pinned chat that may not be in the loaded page: known by id only.
-/// A conversation opened from a notification, which may belong to another team.
-private struct PushedConversationView: View {
-    @Environment(AgentStore.self) private var store
-    let target: PushTarget
-    @State private var session: ChatSession?
-
-    var body: some View {
-        Group {
-            if let session {
-                ConversationView(session: session)
-            } else {
-                Theme.canvas
-            }
-        }
-        .onAppear { if session == nil { session = store.session(sessionId: target.sessionId, title: target.title, teamId: target.teamId) } }
-    }
-}
-
-/// Owns the `ChatSession` for a pushed conversation so it survives view
-/// updates while the row's data stays a plain value.
-private struct ExistingConversationView: View {
-    @Environment(AgentStore.self) private var store
-    let conversation: AgentConversation
-    @State private var session: ChatSession?
-
-    var body: some View {
-        Group {
-            if let session {
-                ConversationView(session: session)
-            } else {
-                Theme.canvas
-            }
-        }
-        .onAppear { if session == nil { session = store.session(for: conversation) } }
-    }
 }
