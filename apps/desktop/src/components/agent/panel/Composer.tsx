@@ -245,7 +245,7 @@ export function Composer({
               }}
             />
           )}
-          <div className="@container flex items-end gap-1 mt-1 min-w-0 @[320px]:gap-2">
+          <div className="@container flex items-start gap-1 mt-1 min-w-0 @[320px]:gap-2">
             <ComposerTools>
               <ComposerAttachmentMenu
                 open={state.attachmentMenuOpen}
