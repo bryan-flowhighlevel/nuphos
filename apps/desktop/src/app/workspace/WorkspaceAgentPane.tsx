@@ -169,8 +169,6 @@ export function WorkspaceAgentPane({
             dockOpen ? 'pr-3' : 'pr-12',
           )}
         >
-          {/* The rest of the header moves the window, so a pane moves by its grip. */}
-          <PaneGrip label={currentHeading.title} />
           {/* Keep the native drag rectangle beside the Share action so hit testing
             never relies on a no-drag hole inside its draggable ancestor. */}
           <div
@@ -235,6 +233,9 @@ export function WorkspaceAgentPane({
           )}
           {savedSessionId && <ChatSummaryToggle active={paneActive && !ws.mainPageOpen} />}
           <PaneCloseButton />
+          {/* The rest of the header moves the window, so a pane moves by its grip. Electron cuts
+            no-drag holes in page order, so the grip comes after the drag area it sits over. */}
+          <PaneGrip label={currentHeading.title} />
         </div>
         <SessionFindBar
           key={selectedSessionId ?? 'home'}
