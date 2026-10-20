@@ -270,12 +270,13 @@ export function Composer({
                   {...runtimeControl}
                   menuOpen={agentMenuOpen}
                   onMenuOpenChange={setAgentMenuOpen}
+                  hero={hero}
                 />
               )}
             </ComposerTools>
             {!hero && <ShellsPanel snapshot={runtimeState} />}
             {modelSession ? (
-              <ModelSelector control={modelControl} disabled={readOnly} streaming={streaming} />
+              <ModelSelector control={modelControl} disabled={readOnly} hero={hero} />
             ) : (
               newConversationModelControl
             )}
