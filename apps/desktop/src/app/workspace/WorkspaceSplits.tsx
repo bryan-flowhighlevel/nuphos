@@ -19,6 +19,7 @@ import {
   selectScope,
   teamScopeOf,
 } from './store/workspaceState'
+import { usePaneCloseConfirm } from './usePaneCloseConfirm'
 import { usePaneFocusTracking } from './usePaneFocusTracking'
 import { WorkspacePaneContext } from './WorkspacePaneContext'
 
@@ -178,6 +179,8 @@ export function WorkspaceSplits({
     registrations.delete(id)
   }
 
+  const closing = usePaneCloseConfirm(stores, multiple, close)
+
   const handleLogout = useCallback(async () => {
     // Other panes stay mounted until logout completes; release their terminals too.
     for (const store of stores.values()) {
@@ -219,7 +222,7 @@ export function WorkspaceSplits({
                 sidebarCollapsed,
                 toggleSidebarCollapsed,
                 isTabFocused: () => focusSurfaces.get(rect.id) === 'tab',
-                closePane: () => close(rect.id),
+                closePane: () => closing.request(rect.id),
                 active: activeId === rect.id,
                 // The first surviving leaf owns persistence, even after the original closes.
                 primary: rect.id === rects[0].id,
@@ -259,6 +262,7 @@ export function WorkspaceSplits({
             </WorkspacePaneContext.Provider>
           )
         })}
+        {closing.dialog}
         <SplitDropOverlay
           rects={rects}
           stores={stores}

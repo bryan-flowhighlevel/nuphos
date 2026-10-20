@@ -15,6 +15,7 @@ import { useChatSummaryOpen } from '../../lib/chatSummaryPanel'
 import { hasCloudOnboardingBinding } from '../../lib/connectorCategories'
 import { isLocalAgentRuntime } from '../../lib/localAgentSharing'
 
+import { PaneCloseButton } from './PaneCloseButton'
 import { PaneGrip } from './PaneGrip'
 import { SessionFindBar } from './SessionFindBar'
 import { useSessionHeading } from './useSessionHeading'
@@ -233,6 +234,7 @@ export function WorkspaceAgentPane({
             />
           )}
           {savedSessionId && <ChatSummaryToggle active={paneActive && !ws.mainPageOpen} />}
+          <PaneCloseButton />
         </div>
         <SessionFindBar
           key={selectedSessionId ?? 'home'}
