@@ -93,7 +93,6 @@ export function PanelHomePage({ c }: { c: PanelViewCtx }) {
         loading={historyLoading}
         onSend={(text, filePaths) => void sendInActive(text, filePaths)}
         onStop={stopActive}
-        streaming={false}
         credentialSelector={visibleHomeCredentialSelector}
         runtimeControl={runtimeControl}
         newConversationModelControl={newConversationModelControl}
@@ -116,7 +115,6 @@ export function PanelHomePage({ c }: { c: PanelViewCtx }) {
         newChat
         onSend={(text, filePaths) => void sendInActive(text, filePaths)}
         onStop={stopActive}
-        streaming={false}
         credentialSelector={visibleHomeCredentialSelector}
         runtimeControl={runtimeControl}
         newConversationModelControl={newConversationModelControl}

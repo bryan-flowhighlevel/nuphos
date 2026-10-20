@@ -60,8 +60,6 @@ export function Composer({
   newChat?: boolean // a new chat fixes an unusable agent by picking another
   onSend: (text: string, filePaths: string[]) => void
   onStop: () => void
-  /** Pending transport work; execution itself comes from the runtime snapshot. */
-  streaming: boolean
   runtimeState?: RuntimeExecution
   executing?: boolean
   readOnly?: boolean
