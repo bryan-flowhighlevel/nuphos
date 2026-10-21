@@ -147,6 +147,7 @@ export function SparkleIcon({ className = 'size-4' }: { className?: string }) {
     <svg
       className={className}
       height="1em"
+      shapeRendering="geometricPrecision"
       style={{ flex: 'none', lineHeight: 1, overflow: 'visible' }}
       viewBox="0 0 24 24"
       width="1em"
@@ -174,9 +175,10 @@ export function SparkleIcon({ className = 'size-4' }: { className?: string }) {
           <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
           <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
         </radialGradient>
-        <clipPath id={`${id}-clip`}>
-          <path d={STAR} />
-        </clipPath>
+        {/* A mask, not a clipPath: Chromium anti-aliases mask edges but cuts clip edges hard. */}
+        <mask id={`${id}-cut`} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+          <path d={STAR} fill="#fff" />
+        </mask>
         <filter id={`${id}-soft`} x="-20%" y="-20%" width="140%" height="140%">
           <feGaussianBlur stdDeviation="0.8" />
         </filter>
@@ -185,13 +187,13 @@ export function SparkleIcon({ className = 'size-4' }: { className?: string }) {
         </filter>
       </defs>
       <g filter={`url(#${id}-shadow)`}>
-        <g clipPath={`url(#${id}-clip)`}>
-          <rect width="24" height="24" fill={`url(#${id}-sheen)`} />
+        <g mask={`url(#${id}-cut)`}>
+          <path d={STAR} fill={`url(#${id}-sheen)`} />
           <path
             d={STAR}
             fill="#120e24"
             filter={`url(#${id}-soft)`}
-            transform="translate(12 12) scale(0.86) translate(-12 -12)"
+            transform="translate(12 12) scale(0.82) translate(-12 -12)"
           />
           <ellipse
             cx="9.6"
