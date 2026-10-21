@@ -20,6 +20,7 @@ import {
   teamScopeOf,
 } from './store/workspaceState'
 import { usePaneCloseConfirm } from './usePaneCloseConfirm'
+import { usePaneDropPreview } from './usePaneDropPreview'
 import { usePaneFocusTracking } from './usePaneFocusTracking'
 import { WorkspacePaneContext } from './WorkspacePaneContext'
 
@@ -44,6 +45,7 @@ export function WorkspaceSplits({
   }, [sidebarCollapsed])
 
   const [layout, setLayout] = useState<SplitLayout>({ id: 'primary' })
+  const { placed, gliding, onPreview } = usePaneDropPreview(layout)
   const [{ activeId, sessionSearchOpen }, setWindowState] = useState({
     activeId: 'primary',
     sessionSearchOpen: false,
@@ -210,6 +212,8 @@ export function WorkspaceSplits({
             registrations.set(rect.id, registerStore)
           }
 
+          const at = placed.get(rect.id) ?? rect
+
           return (
             <WorkspacePaneContext.Provider
               key={rect.id}
@@ -242,12 +246,13 @@ export function WorkspaceSplits({
                   'group/pane absolute flex min-h-0 min-w-0 flex-col overflow-hidden',
                   multiple && 'border border-zGray-800/60',
                   activeId !== rect.id && 'opacity-50',
+                  gliding && 'transition-[left,top,width,height] duration-200 ease-out',
                 )}
                 style={{
-                  left: `${String(rect.left)}%`,
-                  top: `${String(rect.top)}%`,
-                  width: `${String(rect.width)}%`,
-                  height: `${String(rect.height)}%`,
+                  left: `${String(at.left)}%`,
+                  top: `${String(at.top)}%`,
+                  width: `${String(at.width)}%`,
+                  height: `${String(at.height)}%`,
                 }}
                 onPointerDownCapture={() => setActiveId(rect.id)}
                 onFocusCapture={() => setActiveId(rect.id)}
@@ -265,6 +270,8 @@ export function WorkspaceSplits({
         {closing.dialog}
         <SplitDropOverlay
           rects={rects}
+          placed={placed}
+          onPreview={onPreview}
           stores={stores}
           split={split}
           place={(target, id, zone) => {

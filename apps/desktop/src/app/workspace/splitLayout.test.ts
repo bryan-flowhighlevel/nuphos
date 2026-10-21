@@ -5,7 +5,9 @@ import {
   dropPane,
   dropZone,
   focusPaneState,
+  PREVIEW_PANE,
   paneRects,
+  previewDrop,
   removePane,
   reusableBesidePane,
   splitPane,
@@ -136,4 +138,28 @@ test('dropping a pane on another pane centre swaps them in place', () => {
   })
   // A chat that is not a pane yet never swaps in.
   assert.equal(dropPane(layout, 'a', 'z', 'center'), layout)
+})
+
+test('a drop preview is the layout letting go would leave', () => {
+  const layout = splitPane({ id: 'a' }, 'a', 'b', 'row')
+
+  assert.equal(previewDrop(layout, null), layout)
+  assert.deepEqual(previewDrop(layout, { target: 'b', zone: 'center', pane: 'a' }), {
+    direction: 'row',
+    children: [{ id: 'b' }, { id: 'a' }],
+  })
+  assert.deepEqual(
+    previewDrop(layout, { target: 'b', zone: 'bottom', pane: 'a' }),
+    dropPane(layout, 'b', 'a', 'bottom'),
+  )
+})
+
+test('a sidebar chat previews a new pane only when it would split', () => {
+  const layout = splitPane({ id: 'a' }, 'a', 'b', 'row')
+
+  assert.equal(previewDrop(layout, { target: 'a', zone: 'center', pane: null }), layout)
+  assert.deepEqual(
+    paneRects(previewDrop(layout, { target: 'a', zone: 'left', pane: null })).map((r) => r.id),
+    [PREVIEW_PANE, 'a', 'b'],
+  )
 })

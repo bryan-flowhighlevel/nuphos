@@ -103,6 +103,22 @@ export function dropPane(
   )
 }
 
+/** Stands in for a chat that would open in a new pane while a drag shows where it lands. */
+export const PREVIEW_PANE = 'drop-preview'
+
+/** What letting go would do now; `pane` is the dragged pane, null for a sidebar chat. */
+export type DropPreview = { target: string; zone: DropZone; pane: string | null }
+
+/** The layout a drop would leave, so panes can move there before the pointer is released. */
+export function previewDrop(layout: SplitLayout, preview: DropPreview | null): SplitLayout {
+  if (!preview) return layout
+  if (preview.pane) return dropPane(layout, preview.target, preview.pane, preview.zone)
+
+  return preview.zone === 'center'
+    ? layout
+    : dropPane(layout, preview.target, PREVIEW_PANE, preview.zone)
+}
+
 export function paneRects(
   layout: SplitLayout,
   rect = { left: 0, top: 0, width: 100, height: 100 },
