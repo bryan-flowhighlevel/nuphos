@@ -1,9 +1,7 @@
 import clsx from 'clsx'
 import { motion, useReducedMotion } from 'framer-motion'
 import { ChevronRight } from 'lucide-react'
-import { useContext, useEffect, useId, useState } from 'react'
-
-import { ThemeContext } from '../../../hooks/useTheme'
+import { useEffect, useId, useState } from 'react'
 
 import { PRESETS } from './stall'
 import { getAgentLocale } from './textUtils'
@@ -136,28 +134,16 @@ export function DelayedPanelReveal({
 const STAR =
   'M12 24A14.304 14.304 0 000 12 14.304 14.304 0 0012 0a14.305 14.305 0 0012 12 14.305 14.305 0 00-12 12'
 
-// Dark: an indigo glass core over a soft sheen. Light: a pearl core over a deeper sheen.
-const STAR_PALETTES = {
-  dark: {
-    sheen: ['#f5d0fe', '#a78bfa', '#67e8f9', '#fda4af', '#fde68a'],
-    core: [
-      ['#4c3f8f', 0.55],
-      ['#1d1738', 0.8],
-      ['#120e24', 0.9],
-    ],
-    glow: { color: '#8b5cf6', opacity: 0.55, dy: 0 },
-    shine: [0.8, 0.45],
-  },
-  light: {
-    sheen: ['#e879f9', '#8b5cf6', '#22d3ee', '#fb7185', '#fbbf24'],
-    core: [
-      ['#ffffff', 0.95],
-      ['#f5f3ff', 0.85],
-      ['#ede9fe', 0.75],
-    ],
-    glow: { color: '#7c3aed', opacity: 0.28, dy: 0.6 },
-    shine: [0.9, 0.6],
-  },
+// A pearl glass core over an iridescent sheen; it reads well on both themes.
+const STAR_LOOK = {
+  sheen: ['#e879f9', '#8b5cf6', '#22d3ee', '#fb7185', '#fbbf24'],
+  core: [
+    ['#ffffff', 0.95],
+    ['#f5f3ff', 0.85],
+    ['#ede9fe', 0.75],
+  ],
+  glow: { color: '#7c3aed', opacity: 0.28, dy: 0.6 },
+  shine: [0.9, 0.6],
 } as const
 
 /**
@@ -168,7 +154,7 @@ const STAR_PALETTES = {
 export function SparkleIcon({ className = 'size-4' }: { className?: string }) {
   const id = useId().replace(/:/g, '')
   const still = useReducedMotion()
-  const palette = STAR_PALETTES[useContext(ThemeContext)?.resolved ?? 'dark']
+  const palette = STAR_LOOK
 
   return (
     <svg
