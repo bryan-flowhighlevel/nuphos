@@ -1,7 +1,9 @@
 import clsx from 'clsx'
 import { motion, useReducedMotion } from 'framer-motion'
 import { ChevronRight } from 'lucide-react'
-import { useEffect, useId, useState } from 'react'
+import { useContext, useEffect, useId, useState } from 'react'
+
+import { ThemeContext } from '../../../hooks/useTheme'
 
 import { PRESETS } from './stall'
 import { getAgentLocale } from './textUtils'
@@ -134,6 +136,30 @@ export function DelayedPanelReveal({
 const STAR =
   'M12 24A14.304 14.304 0 000 12 14.304 14.304 0 0012 0a14.305 14.305 0 0012 12 14.305 14.305 0 00-12 12'
 
+// Dark: an indigo glass core over a soft sheen. Light: a pearl core over a deeper sheen.
+const STAR_PALETTES = {
+  dark: {
+    sheen: ['#f5d0fe', '#a78bfa', '#67e8f9', '#fda4af', '#fde68a'],
+    core: [
+      ['#4c3f8f', 0.55],
+      ['#1d1738', 0.8],
+      ['#120e24', 0.9],
+    ],
+    glow: { color: '#8b5cf6', opacity: 0.55, dy: 0 },
+    shine: [0.8, 0.45],
+  },
+  light: {
+    sheen: ['#e879f9', '#8b5cf6', '#22d3ee', '#fb7185', '#fbbf24'],
+    core: [
+      ['#ffffff', 0.95],
+      ['#f5f3ff', 0.85],
+      ['#ede9fe', 0.75],
+    ],
+    glow: { color: '#7c3aed', opacity: 0.28, dy: 0.6 },
+    shine: [0.9, 0.6],
+  },
+} as const
+
 /**
  * The agent's mark as a glossy holographic star: a glassy core over a slowly
  * shifting violet–cyan–rose sheen, two soft highlights and a violet glow.
@@ -142,6 +168,7 @@ const STAR =
 export function SparkleIcon({ className = 'size-4' }: { className?: string }) {
   const id = useId().replace(/:/g, '')
   const still = useReducedMotion()
+  const palette = STAR_PALETTES[useContext(ThemeContext)?.resolved ?? 'dark']
 
   return (
     <svg
@@ -156,11 +183,9 @@ export function SparkleIcon({ className = 'size-4' }: { className?: string }) {
       <title>Nuphos Agent</title>
       <defs>
         <linearGradient id={`${id}-sheen`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#f5d0fe" />
-          <stop offset="28%" stopColor="#a78bfa" />
-          <stop offset="50%" stopColor="#67e8f9" />
-          <stop offset="72%" stopColor="#fda4af" />
-          <stop offset="100%" stopColor="#fde68a" />
+          {palette.sheen.map((color, index) => (
+            <stop key={color} offset={`${String(index * 25)}%`} stopColor={color} />
+          ))}
           {!still && (
             <animateTransform
               attributeName="gradientTransform"
@@ -172,9 +197,14 @@ export function SparkleIcon({ className = 'size-4' }: { className?: string }) {
           )}
         </linearGradient>
         <radialGradient id={`${id}-core`} cx="0.42" cy="0.38" r="0.62">
-          <stop offset="0%" stopColor="#4c3f8f" stopOpacity="0.55" />
-          <stop offset="55%" stopColor="#1d1738" stopOpacity="0.8" />
-          <stop offset="100%" stopColor="#120e24" stopOpacity="0.9" />
+          {palette.core.map(([color, opacity], index) => (
+            <stop
+              key={color}
+              offset={['0%', '55%', '100%'][index]}
+              stopColor={color}
+              stopOpacity={opacity}
+            />
+          ))}
         </radialGradient>
         <radialGradient id={`${id}-shine`} cx="0.5" cy="0.5" r="0.5">
           <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
@@ -188,7 +218,13 @@ export function SparkleIcon({ className = 'size-4' }: { className?: string }) {
           <feGaussianBlur stdDeviation="1.2" />
         </filter>
         <filter id={`${id}-glow`} x="-40%" y="-40%" width="180%" height="180%">
-          <feDropShadow dx="0" dy="0" stdDeviation="1.4" floodColor="#8b5cf6" floodOpacity="0.55" />
+          <feDropShadow
+            dx="0"
+            dy={palette.glow.dy}
+            stdDeviation="1.4"
+            floodColor={palette.glow.color}
+            floodOpacity={palette.glow.opacity}
+          />
         </filter>
       </defs>
       <g filter={`url(#${id}-glow)`}>
@@ -207,7 +243,7 @@ export function SparkleIcon({ className = 'size-4' }: { className?: string }) {
             ry="1"
             transform="rotate(-45 9.6 9.2)"
             fill={`url(#${id}-shine)`}
-            opacity="0.8"
+            opacity={palette.shine[0]}
           />
           <ellipse
             cx="15.2"
@@ -216,7 +252,7 @@ export function SparkleIcon({ className = 'size-4' }: { className?: string }) {
             ry="0.55"
             transform="rotate(-45 15.2 15.6)"
             fill={`url(#${id}-shine)`}
-            opacity="0.45"
+            opacity={palette.shine[1]}
           />
         </g>
       </g>
