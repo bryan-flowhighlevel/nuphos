@@ -144,7 +144,7 @@ function centreHint(movingPane: boolean) {
     : { Icon: SquareArrowDown, text: 'Open here' }
 }
 
-/** Blurs the pane under the pointer and labels what letting go will do there. */
+/** Blurs where the dragged pane would land, and labels what letting go will do there. */
 function ZoneHint({
   rect,
   zone,
@@ -159,8 +159,8 @@ function ZoneHint({
   return (
     <>
       <div
-        className="pointer-events-none absolute bg-zGray-950/25 backdrop-blur-[3px] transition-opacity duration-150"
-        style={zoneStyle(rect, 'center')}
+        className="pointer-events-none absolute bg-zGray-950/25 backdrop-blur-[3px] transition-all duration-150"
+        style={zoneStyle(rect, zone)}
       />
       <div
         className={clsx(
