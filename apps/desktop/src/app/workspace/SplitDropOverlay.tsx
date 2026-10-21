@@ -10,6 +10,7 @@ import {
 import { useEffect, useState } from 'react'
 
 import { PANE_DRAG_TYPE, PREVIEW_PANE, SESSION_DRAG_TYPE, dropZone } from './splitLayout'
+import { GLIDE } from './usePaneDropPreview'
 
 import type { DropPreview, DropZone, PaneRect } from './splitLayout'
 import type { WorkspaceStore } from './store/workspaceStore'
@@ -190,7 +191,10 @@ function LandingHint({
 }) {
   return (
     <div
-      className="pointer-events-none absolute m-2 flex items-center justify-center rounded-lg border-2 border-dashed border-zViolet-400/70 bg-zViolet-500/10 transition-all duration-200 ease-out"
+      className={clsx(
+        'pointer-events-none absolute m-2 flex items-center justify-center rounded-lg border-2 border-dashed border-zViolet-400/70 bg-zViolet-500/10 transition-all',
+        GLIDE,
+      )}
       style={zoneStyle(rect, 'center')}
     >
       <HintLabel zone={zone} movingPane={movingPane} />
@@ -233,7 +237,7 @@ function SourceVeil({ rect }: { rect?: PaneRect }) {
 
   return (
     <div
-      className="pointer-events-none absolute bg-zGray-950/40 transition-all duration-200 ease-out"
+      className={clsx('pointer-events-none absolute bg-zGray-950/25 transition-all', GLIDE)}
       style={zoneStyle(rect, 'center')}
     />
   )

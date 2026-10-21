@@ -20,7 +20,7 @@ import {
   teamScopeOf,
 } from './store/workspaceState'
 import { usePaneCloseConfirm } from './usePaneCloseConfirm'
-import { usePaneDropPreview } from './usePaneDropPreview'
+import { GLIDE, usePaneDropPreview } from './usePaneDropPreview'
 import { usePaneFocusTracking } from './usePaneFocusTracking'
 import { WorkspacePaneContext } from './WorkspacePaneContext'
 
@@ -196,7 +196,7 @@ export function WorkspaceSplits({
   return (
     <div className="flex h-full min-h-0 overflow-hidden">
       <div ref={setSidebarHost} className="flex shrink-0" />
-      <div className="relative min-w-0 flex-1">
+      <div className="relative min-w-0 flex-1 bg-main">
         {/* Flat keyed leaves stay mounted even when the split tree changes shape. */}
         {rects.map((rect) => {
           let registerStore = registrations.get(rect.id)
@@ -246,7 +246,11 @@ export function WorkspaceSplits({
                   'group/pane absolute flex min-h-0 min-w-0 flex-col overflow-hidden',
                   multiple && 'border border-zGray-800/60',
                   activeId !== rect.id && 'opacity-50',
-                  gliding && 'transition-[left,top,width,height] duration-200 ease-out',
+                  // Panes slide over the split area's own background, so crossing panes leave no gaps.
+                  gliding && [
+                    'bg-main transition-[left,top,width,height] will-change-[left,top,width,height]',
+                    GLIDE,
+                  ],
                 )}
                 style={{
                   left: `${String(at.left)}%`,

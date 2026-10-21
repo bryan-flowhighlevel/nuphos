@@ -5,8 +5,11 @@ import { paneRects, previewDrop } from './splitLayout'
 import type { DropPreview, SplitLayout } from './splitLayout'
 import type { SetStateAction } from 'react'
 
+/** One curve for every moving part of a drop preview: a quick start that eases into place. */
+export const GLIDE = 'duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]'
+
 /** How long panes keep gliding after a drag stops, so a cancelled drag slides back. */
-const SETTLE_MS = 220
+const SETTLE_MS = 340
 
 /**
  * Where every pane would sit if the current drag were let go now. Panes glide
