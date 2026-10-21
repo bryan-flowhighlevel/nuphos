@@ -135,9 +135,9 @@ const STAR =
   'M12 24A14.304 14.304 0 000 12 14.304 14.304 0 0012 0a14.305 14.305 0 0012 12 14.305 14.305 0 00-12 12'
 
 /**
- * The agent's mark as a glossy holographic star: a dark glassy core whose
- * edges catch a slowly shifting violet–cyan–rose sheen, with two soft
- * highlights. The sheen holds still when the system asks for reduced motion.
+ * The agent's mark as a glossy holographic star: a glassy core over a slowly
+ * shifting violet–cyan–rose sheen, two soft highlights and a violet glow.
+ * The sheen holds still when the system asks for reduced motion.
  */
 export function SparkleIcon({ className = 'size-4' }: { className?: string }) {
   const id = useId().replace(/:/g, '')
@@ -171,6 +171,11 @@ export function SparkleIcon({ className = 'size-4' }: { className?: string }) {
             />
           )}
         </linearGradient>
+        <radialGradient id={`${id}-core`} cx="0.42" cy="0.38" r="0.62">
+          <stop offset="0%" stopColor="#4c3f8f" stopOpacity="0.55" />
+          <stop offset="55%" stopColor="#1d1738" stopOpacity="0.8" />
+          <stop offset="100%" stopColor="#120e24" stopOpacity="0.9" />
+        </radialGradient>
         <radialGradient id={`${id}-shine`} cx="0.5" cy="0.5" r="0.5">
           <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
           <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
@@ -180,38 +185,38 @@ export function SparkleIcon({ className = 'size-4' }: { className?: string }) {
           <path d={STAR} fill="#fff" />
         </mask>
         <filter id={`${id}-soft`} x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="0.8" />
+          <feGaussianBlur stdDeviation="1.2" />
         </filter>
-        <filter id={`${id}-shadow`} x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="0.7" stdDeviation="0.9" floodColor="#000" floodOpacity="0.45" />
+        <filter id={`${id}-glow`} x="-40%" y="-40%" width="180%" height="180%">
+          <feDropShadow dx="0" dy="0" stdDeviation="1.4" floodColor="#8b5cf6" floodOpacity="0.55" />
         </filter>
       </defs>
-      <g filter={`url(#${id}-shadow)`}>
+      <g filter={`url(#${id}-glow)`}>
         <g mask={`url(#${id}-cut)`}>
           <path d={STAR} fill={`url(#${id}-sheen)`} />
           <path
             d={STAR}
-            fill="#120e24"
+            fill={`url(#${id}-core)`}
             filter={`url(#${id}-soft)`}
-            transform="translate(12 12) scale(0.82) translate(-12 -12)"
+            transform="translate(12 12) scale(0.72) translate(-12 -12)"
           />
           <ellipse
             cx="9.6"
             cy="9.2"
-            rx="2.4"
-            ry="0.9"
+            rx="2.6"
+            ry="1"
             transform="rotate(-45 9.6 9.2)"
             fill={`url(#${id}-shine)`}
-            opacity="0.7"
+            opacity="0.8"
           />
           <ellipse
             cx="15.2"
             cy="15.6"
-            rx="1.4"
-            ry="0.5"
+            rx="1.5"
+            ry="0.55"
             transform="rotate(-45 15.2 15.6)"
             fill={`url(#${id}-shine)`}
-            opacity="0.35"
+            opacity="0.45"
           />
         </g>
       </g>
