@@ -131,33 +131,88 @@ export function DelayedPanelReveal({
   )
 }
 
+const STAR =
+  'M12 24A14.304 14.304 0 000 12 14.304 14.304 0 0012 0a14.305 14.305 0 0012 12 14.305 14.305 0 00-12 12'
+
+/**
+ * The agent's mark as a glossy holographic star: a dark glassy core whose
+ * edges catch a slowly shifting violet–cyan–rose sheen, with two soft
+ * highlights. The sheen holds still when the system asks for reduced motion.
+ */
 export function SparkleIcon({ className = 'size-4' }: { className?: string }) {
-  const gradientId = `nuphos-agent-gradient-${useId().replace(/:/g, '')}`
+  const id = useId().replace(/:/g, '')
+  const still = useReducedMotion()
 
   return (
     <svg
       className={className}
-      fill="currentColor"
-      fillRule="evenodd"
       height="1em"
-      style={{ flex: 'none', lineHeight: 1 }}
+      style={{ flex: 'none', lineHeight: 1, overflow: 'visible' }}
       viewBox="0 0 24 24"
       width="1em"
       xmlns="http://www.w3.org/2000/svg"
     >
       <title>Nuphos Agent</title>
-      <path
-        d="M12 24A14.304 14.304 0 000 12 14.304 14.304 0 0012 0a14.305 14.305 0 0012 12 14.305 14.305 0 00-12 12"
-        fill={`url(#${gradientId})`}
-        style={{ transformOrigin: 'center' }}
-      />
       <defs>
-        <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style={{ stopColor: 'rgb(203, 203, 255)', stopOpacity: 1 }} />
-          <stop offset="50%" style={{ stopColor: 'rgb(159, 155, 246)', stopOpacity: 1 }} />
-          <stop offset="100%" style={{ stopColor: 'rgb(243, 244, 255)', stopOpacity: 1 }} />
+        <linearGradient id={`${id}-sheen`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#f5d0fe" />
+          <stop offset="28%" stopColor="#a78bfa" />
+          <stop offset="50%" stopColor="#67e8f9" />
+          <stop offset="72%" stopColor="#fda4af" />
+          <stop offset="100%" stopColor="#fde68a" />
+          {!still && (
+            <animateTransform
+              attributeName="gradientTransform"
+              type="rotate"
+              values="0 0.5 0.5;360 0.5 0.5"
+              dur="9s"
+              repeatCount="indefinite"
+            />
+          )}
         </linearGradient>
+        <radialGradient id={`${id}-shine`} cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+        </radialGradient>
+        <clipPath id={`${id}-clip`}>
+          <path d={STAR} />
+        </clipPath>
+        <filter id={`${id}-soft`} x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="0.8" />
+        </filter>
+        <filter id={`${id}-shadow`} x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="0.7" stdDeviation="0.9" floodColor="#000" floodOpacity="0.45" />
+        </filter>
       </defs>
+      <g filter={`url(#${id}-shadow)`}>
+        <g clipPath={`url(#${id}-clip)`}>
+          <rect width="24" height="24" fill={`url(#${id}-sheen)`} />
+          <path
+            d={STAR}
+            fill="#120e24"
+            filter={`url(#${id}-soft)`}
+            transform="translate(12 12) scale(0.86) translate(-12 -12)"
+          />
+          <ellipse
+            cx="9.6"
+            cy="9.2"
+            rx="2.4"
+            ry="0.9"
+            transform="rotate(-45 9.6 9.2)"
+            fill={`url(#${id}-shine)`}
+            opacity="0.7"
+          />
+          <ellipse
+            cx="15.2"
+            cy="15.6"
+            rx="1.4"
+            ry="0.5"
+            transform="rotate(-45 15.2 15.6)"
+            fill={`url(#${id}-shine)`}
+            opacity="0.35"
+          />
+        </g>
+      </g>
     </svg>
   )
 }
