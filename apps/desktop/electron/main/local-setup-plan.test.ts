@@ -82,9 +82,17 @@ describe('planSkillSync', () => {
     assert.deepEqual(plan.skipped, [{ name: 'handmade', reason: 'name_taken' }])
   })
 
+  it('skips a skill whose SKILL.md could not be read', () => {
+    const plan = planSkillSync([skill('linked', { 'notes.md': [1, 'a'] })], {}, [])
+
+    assert.deepEqual(plan.synced, [])
+    assert.deepEqual(plan.skipped, [{ name: 'linked', reason: 'unreadable' }])
+  })
+
   it('skips skills too large or truncated by the walk', () => {
     const many = Object.fromEntries(
-      Array.from({ length: 200 }, (_, i) => [`f${i}.md`, [1, 'x'] as [number, string]]),
+      // Cut off at 200 files before the walk reached SKILL.md, as a large checkout is.
+      Array.from({ length: 200 }, (_, i) => [`f${String(i)}.md`, [1, 'x'] as [number, string]]),
     )
     const plan = planSkillSync(
       [skill('huge', { 'SKILL.md': [MAX_SYNCED_SKILL_BYTES + 1, 'a'] }), skill('wide', many)],
@@ -100,7 +108,10 @@ describe('planSkillSync', () => {
 
   it('fits the smallest skills into the runtime budget and drops a synced one that no longer fits', () => {
     const big = Object.fromEntries(
-      Array.from({ length: 150 }, (_, i) => [`f${i}.md`, [1, 'x'] as [number, string]]),
+      Array.from({ length: 150 }, (_, i) => [
+        i ? `f${String(i)}.md` : 'SKILL.md',
+        [1, 'x'] as [number, string],
+      ]),
     )
     const local = Array.from({ length: 13 }, (_, i) => skill(`s${String(i).padStart(2, '0')}`, big))
     const plan = planSkillSync(local, { s12: {} }, [])

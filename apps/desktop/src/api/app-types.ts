@@ -111,7 +111,7 @@ export type LocalSetupResult = {
   removedSkills: number
   skipped: {
     name: string
-    reason: 'too_large' | 'too_many_files' | 'name_taken' | 'over_budget'
+    reason: 'too_large' | 'too_many_files' | 'name_taken' | 'over_budget' | 'unreadable'
   }[]
   instruction: 'synced' | 'removed' | 'none' | 'too_long'
   instructionParts: number

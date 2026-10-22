@@ -16,6 +16,7 @@ const SKIP_REASON: Record<LocalSetupResult['skipped'][number]['reason'], string>
   too_many_files: '200 files or more',
   name_taken: 'a personal skill with this name already exists',
   over_budget: 'over the runtime’s skill budget',
+  unreadable: 'its SKILL.md links outside ~/.claude/skills',
 }
 
 function plural(count: number, one: string, many = `${one}s`): string {

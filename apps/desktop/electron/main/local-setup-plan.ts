@@ -19,7 +19,7 @@ export type RemoteObject = { key: string; size: number }
 
 export type SkippedSkill = {
   name: string
-  reason: 'too_large' | 'too_many_files' | 'name_taken' | 'over_budget'
+  reason: 'too_large' | 'too_many_files' | 'name_taken' | 'over_budget' | 'unreadable'
 }
 
 export type SkillSyncPlan = {
@@ -69,9 +69,13 @@ export function planSkillSync(
     const kept = skill.files.filter((file) => file.size <= MAX_SYNCED_FILE_BYTES)
     const size = kept.reduce((sum, file) => sum + file.size, 0)
 
-    if (foreignNames.has(skill.name)) skipped.push({ name: skill.name, reason: 'name_taken' })
-    else if (skill.files.length >= MAX_SYNCED_SKILL_FILES)
+    // The walk stops at 200 files, possibly before reaching SKILL.md, so that comes first.
+    if (skill.files.length >= MAX_SYNCED_SKILL_FILES)
       skipped.push({ name: skill.name, reason: 'too_many_files' })
+    // Its SKILL.md is a link out of the skills directory, so nothing would upload.
+    else if (!skill.files.some((file) => file.relPath === 'SKILL.md'))
+      skipped.push({ name: skill.name, reason: 'unreadable' })
+    else if (foreignNames.has(skill.name)) skipped.push({ name: skill.name, reason: 'name_taken' })
     else if (size > MAX_SYNCED_SKILL_BYTES) skipped.push({ name: skill.name, reason: 'too_large' })
     else candidates.push({ name: skill.name, files: kept, bytes: size })
   }
