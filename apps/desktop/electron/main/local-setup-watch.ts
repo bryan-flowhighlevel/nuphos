@@ -3,16 +3,15 @@
 import fsSync from 'node:fs'
 import path from 'node:path'
 
-import { readConfig } from '../auth/config'
+import { readConfig } from '../auth/config.ts'
 
-import { claudeDir, readState, stateKey, teamState, writeState } from './local-setup-state'
-import { syncLocalSetup } from './local-setup-sync'
+import { claudeDir, readTeam, stateKey, teamKeys, updateTeam } from './local-setup-state.ts'
+import { syncLocalSetup } from './local-setup-sync.ts'
 
 export async function setLocalSetupAutoSync(teamId: string, enabled: boolean) {
-  const state = readState()
-
-  teamState(state, await stateKey(teamId)).autoSync = enabled
-  writeState(state)
+  updateTeam(await stateKey(teamId), (team) => {
+    team.autoSync = enabled
+  })
   if (enabled) {
     startLocalSetupWatcher()
     void syncLocalSetup(teamId).catch((e: unknown) => {
@@ -32,9 +31,9 @@ async function autoSyncTeams(): Promise<string[]> {
 
   if (!userId) return []
 
-  return Object.entries(readState().teams)
-    .filter(([key, team]) => team.autoSync && key.startsWith(`${userId}:`))
-    .map(([key]) => key.slice(userId.length + 1))
+  return teamKeys()
+    .filter((key) => key.startsWith(`${userId}:`) && readTeam(key).autoSync)
+    .map((key) => key.slice(userId.length + 1))
 }
 
 function syncAutoTeams() {
@@ -85,7 +84,7 @@ export function startLocalSetupWatcher() {
 
 /** At start-up: watch only when some team has "Keep in sync" on. */
 export function resumeLocalSetupSync() {
-  if (Object.values(readState().teams).some((team) => team.autoSync)) startLocalSetupWatcher()
+  if (teamKeys().some((key) => readTeam(key).autoSync)) startLocalSetupWatcher()
 }
 
 export function stopLocalSetupWatcher() {
