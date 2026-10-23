@@ -3,6 +3,8 @@ import { isValidUserInfo } from '../auth-status.ts'
 
 import { apiErrorMessage, readConfig, writeConfig } from './config.ts'
 
+import type { ProfileCharacter } from '../../src/types/team.ts'
+
 export type ProfileUpdate = { name: string; username: string; avatarURL: string }
 
 export function updateProfile(input: ProfileUpdate) {
@@ -12,8 +14,6 @@ export function updateProfile(input: ProfileUpdate) {
     body: JSON.stringify(input),
   })
 }
-
-export type ProfileCharacter = 'boy' | 'girl'
 
 /** Picks the person's profile character, or clears it with null. */
 export function setCharacter(character: ProfileCharacter | null) {

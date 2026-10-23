@@ -1,22 +1,30 @@
 import { ObjectId } from 'mongodb'
 import { z } from 'zod'
 
-import { users, mapUser } from './shared'
-
 import { agentMessages } from '@/lib/agent/db/shared'
 import { AppError } from '@/lib/errors'
 
-export const PROFILE_CHARACTERS = ['boy', 'girl'] as const
+import { users, mapUser } from './shared'
 
-export type ProfileCharacter = (typeof PROFILE_CHARACTERS)[number]
+import type { ProfileCharacter } from './types'
+
+export const PROFILE_CHARACTERS = [
+  'boy-fringe',
+  'boy-side',
+  'boy-curly',
+  'girl-waves',
+  'girl-bangs',
+  'girl-pony',
+] as const satisfies readonly ProfileCharacter[]
 
 const characterSchema = z.object({ character: z.enum(PROFILE_CHARACTERS).nullable() }).strict()
 
-/** Picks the person's character, or clears it with null. */
+/** Picks the person's character (look and hairstyle), or clears it with null. */
 export async function setProfileCharacter(userId: string, input: unknown) {
   const parsed = characterSchema.safeParse(input)
 
-  if (!parsed.success) throw new AppError(400, 'invalid_character', 'Pick boy or girl')
+  if (!parsed.success)
+    throw new AppError(400, 'invalid_character', 'Pick one of the six characters')
   const { character } = parsed.data
   const user = await users().findOneAndUpdate(
     { _id: new ObjectId(userId), deletedAt: { $exists: false } },

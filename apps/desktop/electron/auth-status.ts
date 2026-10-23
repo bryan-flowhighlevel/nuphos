@@ -2,6 +2,8 @@
 // can be unit-tested directly (see auth-status.test.ts). auth.ts does the IO
 // (read config, probe /auth/me) and feeds the outcome through here.
 
+import type { ProfileCharacter } from '../src/types/team.ts'
+
 export type UserInfo = {
   id: string
   name: string
@@ -10,7 +12,7 @@ export type UserInfo = {
   avatarURL?: string
   language?: string
   createdAt?: string
-  character?: 'boy' | 'girl'
+  character?: ProfileCharacter
 }
 
 export type AuthStatus = { loggedIn: false } | { loggedIn: true; user: UserInfo; token: string }

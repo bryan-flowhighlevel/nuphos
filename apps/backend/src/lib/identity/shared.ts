@@ -5,6 +5,7 @@ import type {
   NuphosTeam,
   NuphosTeamRole,
   NuphosUser,
+  ProfileCharacter,
   TeamBilling,
   TeamBillingSummary,
 } from '@/lib/identity/types'
@@ -22,7 +23,7 @@ export type NuphosUserDoc = {
   sessionsInvalidBefore?: number
   profileEdited?: boolean
   /** The person's profile character; absent until they pick one. */
-  character?: 'boy' | 'girl'
+  character?: ProfileCharacter
   googleID?: string
   createdAt: Date
   updatedAt: Date

@@ -27,9 +27,8 @@ import { autoUpdater, checkForUpdatesOnce, getUpdaterState, setUpdaterState } fr
 import { mostRecentlyFocusedVisibleAppWindow } from './windows'
 
 import type { PastedAttachmentPayload } from './dialogs'
-import type { ProfileCharacter } from '../auth/profile'
 import type { ThemeSource } from './theme'
-import type { PersonalCredentialProvider } from '../../src/types/team'
+import type { PersonalCredentialProvider, ProfileCharacter } from '../../src/types/team'
 import type { IpcMainInvokeEvent } from 'electron'
 
 export const appChannels = {

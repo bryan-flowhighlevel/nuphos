@@ -98,12 +98,12 @@ test('an unknown time zone falls back to UTC and no messages is level 1', async 
   expect(group.$group._id.$dateToString.timezone).toBe('UTC')
 })
 
-test('a person picks boy or girl, can clear it, and nothing else is accepted', async () => {
-  const picked = await setProfileCharacter(id.toHexString(), { character: 'girl' })
+test('a person picks one of the six characters, can clear it, and nothing else is accepted', async () => {
+  const picked = await setProfileCharacter(id.toHexString(), { character: 'girl-pony' })
 
-  expect(picked.character).toBe('girl')
+  expect(picked.character).toBe('girl-pony')
   expect(update?.filter).toEqual({ _id: id, deletedAt: { $exists: false } })
-  expect(update?.values).toEqual({ $set: { character: 'girl', updatedAt: expect.any(Date) } })
+  expect(update?.values).toEqual({ $set: { character: 'girl-pony', updatedAt: expect.any(Date) } })
 
   const cleared = await setProfileCharacter(id.toHexString(), { character: null })
 
@@ -113,7 +113,13 @@ test('a person picks boy or girl, can clear it, and nothing else is accepted', a
     $set: { updatedAt: expect.any(Date) },
   })
 
-  for (const input of [{ character: 'dragon' }, { character: 'boy', name: 'x' }, null, {}]) {
+  for (const input of [
+    { character: 'dragon' },
+    { character: 'boy' },
+    { character: 'boy-fringe', name: 'x' },
+    null,
+    {},
+  ]) {
     await expect(setProfileCharacter(id.toHexString(), input)).rejects.toMatchObject({
       status: 400,
       code: 'invalid_character',

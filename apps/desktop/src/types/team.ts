@@ -8,10 +8,12 @@ export type UserInfo = {
   avatarURL?: string
   language?: string
   createdAt?: string
-  character?: 'boy' | 'girl'
+  character?: ProfileCharacter
 }
 
-export type ProfileCharacter = 'boy' | 'girl'
+/** A profile character: a look (boy or girl) and one of its three hairstyles. */
+export type ProfileCharacter =
+  'boy-fringe' | 'boy-side' | 'boy-curly' | 'girl-waves' | 'girl-bangs' | 'girl-pony'
 
 /** Days of use turned into a level: see apps/backend/src/lib/identity/character.ts. */
 export type ProfileLevel = {
