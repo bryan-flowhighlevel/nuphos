@@ -32,7 +32,13 @@ export function SummaryIcon() {
  * so only the focused pane answers ⌘I. A narrow pane hides the button (the ⋯
  * menu offers it instead) but keeps the shortcut.
  */
-export function ChatSummaryToggle({ active, hidden = false }: { active: boolean; hidden?: boolean }) {
+export function ChatSummaryToggle({
+  active,
+  hidden = false,
+}: {
+  active: boolean
+  hidden?: boolean
+}) {
   const open = useChatSummaryOpen()
 
   useEffect(() => {
