@@ -1,6 +1,7 @@
 import { ChevronRight, ChevronsUpDown, Loader2, LogOut, Settings } from 'lucide-react'
 
 import { Avatar } from '../Avatar'
+import { ProfileCharacterImage } from '../ProfileCharacterImage'
 import { SkeletonReveal } from '../SkeletonReveal'
 import { Kbd } from '../ui/kbd'
 import {
@@ -172,6 +173,28 @@ function TeamSwitcherMenu({
   )
 }
 
+/** The person's own picture: their profile character once picked, else their photo or initials. */
+function UserPicture({ user, name, size }: { user: UserInfo; name: string; size: number }) {
+  if (!user.character)
+    return (
+      <Avatar
+        src={user.avatarURL}
+        name={name}
+        size={size}
+        className="rounded-full !shadow-none flex-shrink-0"
+      />
+    )
+
+  return (
+    <span
+      className="flex-shrink-0 overflow-hidden rounded-full bg-zViolet-accent/10"
+      style={{ width: size, height: size }}
+    >
+      <ProfileCharacterImage character={user.character} className="h-full w-full" />
+    </span>
+  )
+}
+
 export function SidebarUserEntry({
   user,
   onOpenUserSettings,
@@ -186,22 +209,12 @@ export function SidebarUserEntry({
   return (
     <Menu>
       <MenuTrigger className="titlebar-no-drag min-w-0 flex-1 h-9 flex items-center gap-2.5 px-2 rounded-lg text-[13.5px] text-main outline-none transition-colors hover:bg-[var(--sidebar-overlay-hover)] focus-visible:bg-[var(--sidebar-overlay-focus)] data-[popup-open]:bg-[var(--sidebar-overlay-active)]">
-        <Avatar
-          src={user.avatarURL}
-          name={name}
-          size={22}
-          className="rounded-full !shadow-none flex-shrink-0"
-        />
+        <UserPicture user={user} name={name} size={22} />
         <span className="truncate font-medium">{name}</span>
       </MenuTrigger>
       <MenuContent side="top" align="start" sideOffset={8} className="w-[260px] !rounded-xl !p-1.5">
         <div className="flex items-center gap-2.5 px-2 pb-2.5 pt-1.5">
-          <Avatar
-            src={user.avatarURL}
-            name={name}
-            size={28}
-            className="rounded-full !shadow-none flex-shrink-0"
-          />
+          <UserPicture user={user} name={name} size={28} />
           <div className="min-w-0">
             <div className="truncate text-[13.5px] font-medium text-main">{name}</div>
             {user.email && <div className="truncate text-[12px] text-tertiary">{user.email}</div>}

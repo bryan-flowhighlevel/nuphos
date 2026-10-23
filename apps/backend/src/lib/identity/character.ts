@@ -100,7 +100,11 @@ export function activeDaysPipeline(userId: string, timeZone?: string) {
     {
       $group: {
         _id: {
-          $dateToString: { date: '$createdAt', format: '%Y-%m-%d', timezone: validTimeZone(timeZone) },
+          $dateToString: {
+            date: '$createdAt',
+            format: '%Y-%m-%d',
+            timezone: validTimeZone(timeZone),
+          },
         },
       },
     },

@@ -32,6 +32,8 @@ import type {
   PersonalCredential,
   PersonalCredentialDeepLinkPayload,
   PersonalCredentialProvider,
+  ProfileCharacter,
+  ProfileLevel,
   UpdaterState,
   UserInfo,
 } from '../types/team.ts'
@@ -44,6 +46,8 @@ export type WindowAppApi = {
     provider: PersonalCredentialProvider,
   ): Promise<{ authorizeUrl: string; state: string }>
   atlasDeletePersonalCredential(provider: PersonalCredentialProvider): Promise<void>
+  authSetCharacter(character: ProfileCharacter | null): Promise<UserInfo>
+  authReadLevel(timeZone: string): Promise<ProfileLevel>
   authUploadAvatar(image: Uint8Array): Promise<UserInfo>
   apiUrlSync(): string
   authRemoveAvatar(): Promise<UserInfo>

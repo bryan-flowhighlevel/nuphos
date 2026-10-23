@@ -10,6 +10,7 @@ export type UserInfo = {
   avatarURL?: string
   language?: string
   createdAt?: string
+  character?: 'boy' | 'girl'
 }
 
 export type AuthStatus = { loggedIn: false } | { loggedIn: true; user: UserInfo; token: string }

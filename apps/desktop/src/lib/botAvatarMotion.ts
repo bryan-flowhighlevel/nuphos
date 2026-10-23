@@ -25,16 +25,12 @@ const KEYFRAMES = `@keyframes bot-body{
 43%,66%{transform:scale(1.2,.5);animation-timing-function:ease-in-out}
 }`
 
-/**
- * The avatar SVG with its idle loop. `loop` repeats it, each character starting at its own
- * point so a sidebar of running agents never moves in lockstep. Otherwise it plays once
- * from the start.
- */
-export function withBotAvatarMotion(svg: string, file: BotAvatarFile, loop = true): string {
-  const delay = loop
-    ? -Math.round(((BOT_AVATARS.indexOf(file) * 0.618034) % 1) * PERIOD_S * 100) / 100
-    : 0
-  const repeat = loop ? 'infinite' : '1'
+/** Any character SVG with the idle loop, starting `delay` seconds in (negative = already playing). */
+export function withIdleMotion(
+  svg: string,
+  delay: number,
+  repeat: 'infinite' | '1' = 'infinite',
+): string {
   const style =
     `<style>.bot-body,.bot-eye{transform-box:fill-box}` +
     `.bot-body{transform-origin:50% 100%;animation:bot-body ${String(PERIOD_S)}s ${String(delay)}s ${repeat}}` +
@@ -42,6 +38,20 @@ export function withBotAvatarMotion(svg: string, file: BotAvatarFile, loop = tru
     `${KEYFRAMES}</style>`
 
   return svg.replace(/<svg\b[^>]*>/, (open) => open + style)
+}
+
+/**
+ * The avatar SVG with its idle loop. `loop` repeats it, each character starting at its own
+ * point so a sidebar of running agents never moves in lockstep. Otherwise it plays once
+ * from the start.
+ */
+export function withBotAvatarMotion(svg: string, file: BotAvatarFile, loop = true): string {
+  if (!loop) return withIdleMotion(svg, 0, '1')
+
+  return withIdleMotion(
+    svg,
+    -Math.round(((BOT_AVATARS.indexOf(file) * 0.618034) % 1) * PERIOD_S * 100) / 100,
+  )
 }
 
 /** How long one play of the loop lasts. */
@@ -104,4 +114,39 @@ export async function playOnceBotAvatarUrl(file: BotAvatarFile): Promise<string 
 
 function svgUrl(svg: string): string {
   return URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }))
+}
+
+const ready = new Map<string, string>()
+const loading = new Map<string, Promise<boolean>>()
+
+/** The animated copy of the SVG at `src` once it has loaded; undefined until then. */
+export function animatedSvgUrl(src: string): string | undefined {
+  return ready.get(src)
+}
+
+/** Builds the animated copy of `src` once, kept for the life of the window. False if it could not load. */
+export function loadAnimatedSvg(src: string, animate: (svg: string) => string): Promise<boolean> {
+  const pending =
+    loading.get(src) ??
+    fetch(src)
+      .then((response) => {
+        if (!response.ok) throw new Error(`${src}: HTTP ${String(response.status)}`)
+
+        return response.text()
+      })
+      .then((svg) => {
+        ready.set(src, svgUrl(animate(svg)))
+
+        return true
+      })
+      .catch(() => {
+        // A later mount may try again; until then the still file shows.
+        loading.delete(src)
+
+        return false
+      })
+
+  loading.set(src, pending)
+
+  return pending
 }

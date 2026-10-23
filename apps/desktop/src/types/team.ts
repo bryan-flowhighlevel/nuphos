@@ -8,6 +8,20 @@ export type UserInfo = {
   avatarURL?: string
   language?: string
   createdAt?: string
+  character?: 'boy' | 'girl'
+}
+
+export type ProfileCharacter = 'boy' | 'girl'
+
+/** Days of use turned into a level: see apps/backend/src/lib/identity/character.ts. */
+export type ProfileLevel = {
+  activeDays: number
+  xp: number
+  level: number
+  /** XP earned inside the current level. */
+  levelXp: number
+  /** XP the current level takes from start to the next one. */
+  levelSize: number
 }
 
 export type AuthStatus = { loggedIn: false } | { loggedIn: true; user: UserInfo; token: string }

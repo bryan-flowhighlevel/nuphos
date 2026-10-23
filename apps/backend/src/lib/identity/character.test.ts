@@ -45,7 +45,13 @@ useDb({
 
 test('each level takes one more day than the one before', () => {
   expect([1, 2, 3, 5, 10].map(xpToReach)).toEqual([0, 200, 500, 1400, 5400])
-  expect(levelForActiveDays(0)).toEqual({ activeDays: 0, xp: 0, level: 1, levelXp: 0, levelSize: 200 })
+  expect(levelForActiveDays(0)).toEqual({
+    activeDays: 0,
+    xp: 0,
+    level: 1,
+    levelXp: 0,
+    levelSize: 200,
+  })
   expect(levelForActiveDays(1).level).toBe(1)
   expect(levelForActiveDays(2).level).toBe(2)
   expect(levelForActiveDays(14).level).toBe(5)
@@ -84,9 +90,12 @@ test('the level counts distinct days the person sent a message themselves', asyn
 test('an unknown time zone falls back to UTC and no messages is level 1', async () => {
   days = undefined
   expect(await readProfileLevel('u1', 'Mars/Olympus')).toMatchObject({ activeDays: 0, level: 1 })
-  const group = (pipeline as { $group?: { _id: { $dateToString: { timezone: string } } } }[])[1]
+  const [, group] = pipeline as [
+    unknown,
+    { $group: { _id: { $dateToString: { timezone: string } } } },
+  ]
 
-  expect(group.$group?._id.$dateToString.timezone).toBe('UTC')
+  expect(group.$group._id.$dateToString.timezone).toBe('UTC')
 })
 
 test('a person picks boy or girl, can clear it, and nothing else is accepted', async () => {
@@ -99,7 +108,10 @@ test('a person picks boy or girl, can clear it, and nothing else is accepted', a
   const cleared = await setProfileCharacter(id.toHexString(), { character: null })
 
   expect(cleared.character).toBeUndefined()
-  expect(update?.values).toEqual({ $unset: { character: '' }, $set: { updatedAt: expect.any(Date) } })
+  expect(update?.values).toEqual({
+    $unset: { character: '' },
+    $set: { updatedAt: expect.any(Date) },
+  })
 
   for (const input of [{ character: 'dragon' }, { character: 'boy', name: 'x' }, null, {}]) {
     await expect(setProfileCharacter(id.toHexString(), input)).rejects.toMatchObject({

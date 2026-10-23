@@ -10,7 +10,7 @@ import { apiUrl, setApiUrl } from '../api-endpoint'
 import { selectAsciiInputSource } from '../input-source'
 import * as atlas from '../atlas'
 import * as auth from '../auth'
-import { removeAvatar, updateProfile, uploadAvatar } from '../auth/profile'
+import { readLevel, removeAvatar, setCharacter, updateProfile, uploadAvatar } from '../auth/profile'
 import * as fileTransfer from '../fileTransfer'
 import { readImageAttachment, registerAttachment } from '../imageAttachment'
 import { raiseWindow } from '../window-raise'
@@ -27,6 +27,7 @@ import { autoUpdater, checkForUpdatesOnce, getUpdaterState, setUpdaterState } fr
 import { mostRecentlyFocusedVisibleAppWindow } from './windows'
 
 import type { PastedAttachmentPayload } from './dialogs'
+import type { ProfileCharacter } from '../auth/profile'
 import type { ThemeSource } from './theme'
 import type { PersonalCredentialProvider } from '../../src/types/team'
 import type { IpcMainInvokeEvent } from 'electron'
@@ -41,6 +42,8 @@ export const appChannels = {
     atlas.startPersonalCredential(provider),
   'atlas:deletePersonalCredential': (_e: unknown, provider: PersonalCredentialProvider) =>
     atlas.deletePersonalCredential(provider),
+  'auth:setCharacter': (_e: unknown, character: ProfileCharacter | null) => setCharacter(character),
+  'auth:readLevel': (_e: unknown, timeZone: string) => readLevel(timeZone),
   'auth:uploadAvatar': (_e: unknown, image: Uint8Array) => uploadAvatar(image),
   'auth:removeAvatar': () => removeAvatar(),
   'auth:status': () => auth.status(),
