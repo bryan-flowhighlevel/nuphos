@@ -8,6 +8,7 @@ import { GITHUB_API, githubFetch } from '@/lib/byos/github-http'
 import { logEvent } from '@/lib/observability'
 
 import { agentConversations, getConversationBySessionId } from './db'
+import { githubHealthTargets, refreshLinkedPullHealth } from './resource-webhook-health'
 import { resourceCredentialAllowed } from './session-resources'
 import { enqueueResourceTurn } from './thread-queue'
 
@@ -123,15 +124,18 @@ export function githubResourceEvents(event: string, payload: unknown) {
   }))
 }
 
-/** A finished commit status (pending is churn); its PRs are resolved by `statusEvents`. */
-export function githubStatusCommit(event: string, payload: unknown) {
+/**
+ * A finished commit status (pending is churn); its PRs are resolved by `statusEvents`.
+ * A tag's health also follows our own statuses, so `includeOwn` keeps them.
+ */
+export function githubStatusCommit(event: string, payload: unknown, includeOwn = false) {
   if (event !== 'status') return null
   const parsed = payloadSchema.safeParse(payload)
 
   if (!parsed.success) return null
   const body = parsed.data
 
-  if (!body.sha || !body.repository.full_name || ownEvent(body)) return null
+  if (!body.sha || !body.repository.full_name || (!includeOwn && ownEvent(body))) return null
   if (!['success', 'failure', 'error'].includes(body.state ?? '')) return null
 
   return {
@@ -216,12 +220,29 @@ export async function routeResourceWebhook(event: string, payload: unknown, deli
   if (pullState) {
     await agentConversations().updateMany(
       { 'linkedResources.key': pullState.key },
-      { $set: { 'linkedResources.$[resource].state': pullState.state } },
+      {
+        // Merged or closed is the whole story; reopening re-reads the health below.
+        $set: {
+          'linkedResources.$[resource].state': pullState.state,
+          'linkedResources.$[resource].health': null,
+        },
+      },
       { arrayFilters: [{ 'resource.key': pullState.key }] },
     )
   }
-  const commit = githubStatusCommit(event, payload)
-  const events = commit ? await statusEvents(commit) : githubResourceEvents(event, payload)
+  const statusCommit = githubStatusCommit(event, payload, true)
+  // Resolved once: the commit's open PRs serve both the health refresh and the wakeups.
+  const statusPulls = statusCommit ? await statusEvents(statusCommit) : []
+
+  // A tag that can't refresh keeps its last health; the wakeups below still run.
+  await refreshLinkedPullHealth(
+    statusCommit
+      ? statusPulls.map((routed) => ({ ...statusCommit, key: routed.key }))
+      : githubHealthTargets(event, payload),
+  )
+  let events = githubResourceEvents(event, payload)
+
+  if (statusCommit) events = githubStatusCommit(event, payload) ? statusPulls : []
 
   if (!events.length) return
   if (!deliveryId || deliveryId.length > 200)
