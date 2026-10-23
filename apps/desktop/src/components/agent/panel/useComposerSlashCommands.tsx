@@ -1,23 +1,24 @@
-import { useContext, useState } from 'react'
+import { useContext, useRef, useState } from 'react'
 
 import {
   matchSlashOptions,
+  slashEnterTarget,
   slashKeyAction,
-  slashQuery,
+  slashToken,
   SlashCommandsContext,
 } from './composerSlashCommands'
-import { insertTextIntoEditor } from './composerSerialize'
 import { SlashCommandPicker } from './SlashCommandPicker'
 
-import type { SlashCommand, SlashOption } from './composerSlashCommands'
+import type { SlashCommand, SlashOption, SlashToken } from './composerSlashCommands'
 import type { AgentCommand } from '../../../lib/runtimeExecution'
 import type { KeyboardEvent as ReactKeyboardEvent, RefObject } from 'react'
 
 /**
- * Typing `/` at the start of a message lists the agent's own commands, then the
- * Nuphos actions the panel provides (plus Model when this composer has a model
- * control). An agent command is only written into the message; a Nuphos action
- * runs only when picked. Escape keeps the menu closed until the leading `/` is gone.
+ * Typing `/` lists the agent's own commands A to Z; at the start of a message
+ * the Nuphos actions the panel provides follow (plus Model when this composer
+ * has a model control). An agent command is only written into the message, in
+ * place of the typed `/query`, and Enter completes the first match. A Nuphos
+ * action runs only when picked. Escape keeps the menu closed until the `/` is gone.
  */
 export function useComposerSlashCommands(
   editorRef: RefObject<HTMLDivElement | null>,
@@ -27,9 +28,11 @@ export function useComposerSlashCommands(
   agentCommands: readonly AgentCommand[] = [],
 ) {
   const panelCommands = useContext(SlashCommandsContext)
-  const [query, setQuery] = useState<string | null>(null)
+  const [token, setToken] = useState<SlashToken | null>(null)
+  // The text node and caret offset the token was read from, for the replacement.
+  const where = useRef<{ node: Text; end: number } | null>(null)
   const [active, setActive] = useState(-1)
-  // Only the arrows arm Enter; a pointer resting over the menu does not.
+  // Only the arrows arm Enter for any row; a pointer resting over the menu does not.
   const [armed, setArmed] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const [anchor, setAnchor] = useState<{
@@ -43,7 +46,15 @@ export function useComposerSlashCommands(
       ]
     : panelCommands
   const matches =
-    query === null || dismissed ? [] : matchSlashOptions(agentCommands, commands, query)
+    token === null || dismissed
+      ? []
+      : matchSlashOptions(agentCommands, commands, token.query, token.leading)
+  const enterTarget = token ? slashEnterTarget(matches, token.query, { active, armed }) : null
+
+  function close() {
+    setToken(null)
+    where.current = null
+  }
 
   function onInput() {
     const el = editorRef.current
@@ -52,33 +63,43 @@ export function useComposerSlashCommands(
 
     // An IME draft such as `/mo` before conversion is not a query yet.
     if (composingRef.current) return
-    const typed = el?.textContent ?? ''
-
-    // A new message starts fresh: sending clears the editor without an input event.
-    if (!typed.startsWith('/') || typed === '/') setDismissed(false)
     if (!el || !sel?.isCollapsed || node?.nodeType !== Node.TEXT_NODE || !el.contains(node)) {
-      setQuery(null)
+      setDismissed(false)
+      close()
 
       return
     }
     const text = node as Text
-    const next = slashQuery(text.data.slice(0, sel.anchorOffset), el.textContent)
+    const next = slashToken(
+      text.data.slice(0, sel.anchorOffset),
+      text.data.slice(sel.anchorOffset),
+      el.textContent,
+    )
 
-    setQuery(next)
+    // A new `/` starts fresh: sending clears the editor without an input event.
+    if (next === null || next.query === '') setDismissed(false)
+    setToken(next)
     setActive(-1)
     setArmed(false)
-    if (next === null) return
+    if (next === null) {
+      where.current = null
+
+      return
+    }
+    where.current = { node: text, end: sel.anchorOffset }
     const range = document.createRange()
 
-    range.setStart(text, 0)
+    range.setStart(text, next.start)
     range.collapse(true)
     setAnchor({ getBoundingClientRect: () => range.getBoundingClientRect(), contextElement: el })
   }
 
   function select(option: SlashOption) {
     const el = editorRef.current
+    const at = where.current
+    const typed = token
 
-    setQuery(null)
+    close()
     if (!el) return
     if (option.kind === 'nuphos') {
       el.textContent = ''
@@ -87,16 +108,27 @@ export function useComposerSlashCommands(
 
       return
     }
+    if (!at || !typed || !el.contains(at.node)) return
     // Only the text: the agent runs the command once the message is sent.
-    el.textContent = ''
-    insertTextIntoEditor(el, `/${option.command.name} `, { appendToEnd: true })
+    const spaced = /^\s/.test(at.node.data.slice(at.end))
+    const text = `/${option.command.name}${spaced ? '' : ' '}`
+
+    at.node.replaceData(typed.start, at.end - typed.start, text)
+    const sel = window.getSelection()
+    const range = document.createRange()
+
+    el.focus()
+    range.setStart(at.node, Math.min(typed.start + text.length + (spaced ? 1 : 0), at.node.length))
+    range.collapse(true)
+    sel?.removeAllRanges()
+    sel?.addRange(range)
     onEdited()
   }
 
   /** Handles the menu's keys; true when the key was its to take. */
   function onKeyDown(e: ReactKeyboardEvent<HTMLDivElement>): boolean {
     if (matches.length === 0 || e.nativeEvent.isComposing) return false
-    const action = slashKeyAction(e.key, e.shiftKey, { active, armed })
+    const action = slashKeyAction(e.key, e.shiftKey, enterTarget !== null)
 
     if (action === 'next' || action === 'previous') {
       const step = action === 'next' ? 1 : -1
@@ -110,11 +142,13 @@ export function useComposerSlashCommands(
       )
     } else if (action === 'select') {
       select(matches[active] ?? matches[0])
+    } else if (action === 'enter' && enterTarget) {
+      select(enterTarget)
     } else if (action === 'dismiss') {
       setDismissed(true)
     } else {
       // Plain Enter sends the text as typed; the menu goes with it.
-      if (e.key === 'Enter') setQuery(null)
+      if (e.key === 'Enter') close()
 
       return false
     }
@@ -126,7 +160,8 @@ export function useComposerSlashCommands(
   const ui = (
     <SlashCommandPicker
       options={matches}
-      active={active}
+      // With nothing picked yet, show the row Enter would complete.
+      active={active >= 0 || !enterTarget ? active : matches.indexOf(enterTarget)}
       anchor={anchor}
       onSelect={select}
       onActive={(index) => {
