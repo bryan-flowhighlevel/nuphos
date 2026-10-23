@@ -214,6 +214,18 @@ export async function getConversationMessages(
   return await agentMessages().find(filter).sort({ index: 1 }).toArray()
 }
 
+/** The conversation's messages that hold a call to `toolName`, oldest first; parts only. */
+export async function getToolCallMessages(
+  sessionId: string,
+  userId: string,
+  toolName: string,
+): Promise<Pick<AgentMessage, 'index' | 'parts'>[]> {
+  return await agentMessages()
+    .find({ sessionId, userId, 'parts.toolName': toolName }, { projection: { index: 1, parts: 1 } })
+    .sort({ index: 1 })
+    .toArray()
+}
+
 /** Set or clear (rating null) the viewer's feedback on a message. Message docs
  *  are keyed by the conversation owner's userId, not the voter's. */
 export async function setMessageFeedback(args: {

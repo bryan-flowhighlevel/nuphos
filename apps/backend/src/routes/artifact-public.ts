@@ -36,7 +36,17 @@ artifactPublicRoutes.get('/:shareId', async (c) => {
   return c.html(artifactSharePage(share, nonce), 200, artifactPageHeaders(nonce))
 })
 
+// The raw document runs the artifact's own scripts, so it is only served into
+// the share page's frame. Opened as a page of its own it would sit on this
+// origin with none of the viewer's framing, so a browser navigating to it, or
+// a client that does not say where it will be shown, gets a refusal.
 artifactPublicRoutes.get('/:shareId/raw', async (c) => {
+  if (c.req.header('Sec-Fetch-Dest') !== 'iframe') {
+    return c.text('This artifact opens only inside its share page.', 403, {
+      'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff',
+    })
+  }
   const share = await findPublicArtifactShare(c.req.param('shareId'))
 
   if (!share) return notFound()

@@ -1,6 +1,8 @@
 import {
   ARTIFACT_ID,
+  ARTIFACT_TOOL,
   artifactShareInput,
+  artifactVersionFromMessages,
   artifactShareView,
   findArtifactShare,
   publishArtifactShare,
@@ -8,7 +10,7 @@ import {
 } from '@/lib/agent/artifact-shares'
 import { Hono } from 'hono'
 
-import { getReadableConversation } from '@/lib/agent/db'
+import { getReadableConversation, getToolCallMessages } from '@/lib/agent/db'
 import { AppError } from '@/lib/errors'
 import { tokenTeamScope } from '@/lib/identity/token-team-scope'
 
@@ -39,7 +41,7 @@ async function readableArtifact(c: AuthContext, bodyTeamId?: unknown) {
 
   if (!conversation) throw new AppError(404, 'not_found', 'Conversation not found')
 
-  return { teamId, sessionId, artifactId }
+  return { teamId, sessionId, artifactId, ownerUserId: conversation.userId }
 }
 
 function requirePerson(c: AuthContext) {
@@ -61,12 +63,23 @@ artifactShareRoutes.put('/conversations/:sessionId/artifacts/:artifactId/share',
   const parsed = artifactShareInput.safeParse(body)
 
   if (!parsed.success) throw new AppError(400, 'invalid_request', parsed.error.message)
-  const { teamId, sessionId, artifactId } = await readableArtifact(c, parsed.data.teamId)
+  const { teamId, sessionId, artifactId, ownerUserId } = await readableArtifact(
+    c,
+    parsed.data.teamId,
+  )
+  // The stored transcript is the only source: a version still streaming in an
+  // unfinished turn can be published once the turn is saved.
+  const messages = await getToolCallMessages(sessionId, ownerUserId, ARTIFACT_TOOL)
+  const version = artifactVersionFromMessages(messages, artifactId, parsed.data.version)
+
+  if (!version) {
+    throw new AppError(404, 'not_found', 'That artifact version is not in the saved conversation')
+  }
   const share = await publishArtifactShare({
     teamId,
     sessionId,
     artifactId,
-    input: parsed.data,
+    input: version,
     publishedBy: { id: c.get('userId'), name: c.get('userName') },
   })
 

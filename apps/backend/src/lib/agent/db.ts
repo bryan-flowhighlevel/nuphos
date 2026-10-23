@@ -14,6 +14,7 @@ export {
   getConversationModelFallbackModelId,
   getConversationWithMessages,
   getReadableConversation,
+  getToolCallMessages,
   markConversationModelFallbackActive,
   pickModelFallbackModelId,
   setConversationPreviewContext,
