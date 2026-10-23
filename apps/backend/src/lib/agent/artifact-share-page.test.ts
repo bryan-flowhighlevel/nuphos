@@ -81,8 +81,36 @@ describe('artifact share page', () => {
   test('links in an HTML artifact open a new tab, and the bootstrap lands in its head', () => {
     const doc = htmlArtifactDocument('<!-- <head> --><!doctype html><html><head><title>T</title>')
 
-    expect(doc).toContain('<head><base target="_blank">')
+    expect(doc.indexOf('<head>')).toBeLessThan(doc.indexOf('<base target="_blank">'))
     expect(doc.indexOf('<base')).toBeLessThan(doc.indexOf('<title>'))
+  })
+
+  test('an HTML artifact gets a viewport only when it brought none, and defaults it can override', () => {
+    const bare = htmlArtifactDocument('<!doctype html><html><head><title>T</title></head></html>')
+    const own = htmlArtifactDocument(
+      '<!doctype html><html><head><meta name="viewport" content="width=600"></head></html>',
+    )
+
+    expect(bare).toContain(
+      '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">',
+    )
+    expect(own).not.toContain('viewport-fit=cover')
+    expect(own).toContain('content="width=600"')
+    // Zero-specificity defaults: any rule the artifact writes wins.
+    expect(bare).toContain(':where(img,video,canvas){max-width:100%;height:auto}')
+  })
+
+  test('the viewer fits phones, touch and foldables', () => {
+    const page = artifactSharePage(share, 'n0nce')
+
+    expect(page).toContain('viewport-fit=cover')
+    expect(page).toContain('env(safe-area-inset-bottom)')
+    expect(page).toContain('@media (pointer:coarse){.mark,.icon{min-width:44px;height:44px}')
+    expect(page).toContain('@media (horizontal-viewport-segments:2)')
+    expect(page).toContain('@media (vertical-viewport-segments:2)')
+    expect(page).toContain('env(viewport-segment-width 0 0,50%)')
+    expect(page).toContain('navigator.share')
+    expect(page).toContain('id="share"')
   })
 
   test('downloads are named after the title', () => {

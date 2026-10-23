@@ -24,7 +24,14 @@ export function createArtifactTool() {
       'html: one complete document with inline <style> and <script>. It runs in a sandbox with no ' +
       "access to Nuphos, the user's session, cookies or storage, so it cannot call Nuphos APIs. It may " +
       "load libraries from public https CDNs, and its links open in the user's browser. " +
-      'markdown: a document. svg: a single <svg> element with a viewBox. code: one file; set language.',
+      'markdown: a document. svg: a single <svg> element with a viewBox. code: one file; set language. ' +
+      'People open artifacts in a narrow side panel, on phones, tablets and foldables, so write HTML ' +
+      'mobile-first and fluid: include <meta name="viewport" content="width=device-width, initial-scale=1">, ' +
+      'size with %, rem, fr and clamp() rather than fixed pixel widths, let flex and grid rows wrap, keep ' +
+      'media at max-width:100%, make tap targets at least 44px, and never require horizontal scrolling. ' +
+      'It should read well from 320px to a full desktop. On a foldable, Nuphos keeps the artifact off the ' +
+      'fold itself, so do not use viewport segments, which are not exposed inside the artifact frame. ' +
+      'Give an svg a viewBox and no fixed width or height so it scales.',
     inputSchema: z.object({
       label: labelField,
       artifactId: z
