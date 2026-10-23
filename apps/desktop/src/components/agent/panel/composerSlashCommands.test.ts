@@ -6,6 +6,8 @@ import {
   matchSlashOptions,
   slashEnterTarget,
   slashKeyAction,
+  slashShownRow,
+  slashStep,
   slashToken,
 } from './composerSlashCommands.ts'
 
@@ -134,6 +136,48 @@ test('a command typed out in full is sent as it is', () => {
 
   assert.equal(slashEnterTarget(options, 'model', { active: -1, armed: false }), null)
   assert.equal(slashEnterTarget(options, 'MODEL', { active: -1, armed: false }), null)
+})
+
+test('a command typed out in full is sent even when a longer one sorts first', () => {
+  const skills = [
+    { name: 'review', description: '' },
+    { name: 'review-pr', description: '' },
+  ]
+  const options = matchSlashOptions(skills, [], 'review', true, { 'review-pr': 5 })
+
+  assert.deepEqual(options.map(label), ['agent:review-pr', 'agent:review'])
+  assert.equal(slashEnterTarget(options, 'review', { active: -1, armed: false }), null)
+  assert.equal(slashEnterTarget(options, 'Review', { active: -1, armed: false }), null)
+  // A pointer resting on the longer one does not rewrite it either.
+  assert.equal(slashEnterTarget(options, 'review', { active: 0, armed: false }), null)
+  // The arrows still pick it.
+  assert.equal(
+    label(slashEnterTarget(options, 'review', { active: 0, armed: true })),
+    'agent:review-pr',
+  )
+})
+
+test('the first ↓ moves off the row shown highlighted', () => {
+  const options = matchSlashOptions(
+    [
+      { name: 'debug', description: '' },
+      { name: 'deploy', description: '' },
+      { name: 'docs', description: '' },
+    ],
+    [],
+    'd',
+  )
+  const target = slashEnterTarget(options, 'd', { active: -1, armed: false })
+  const shown = slashShownRow(options, -1, target)
+
+  assert.equal(shown, 0)
+  assert.equal(slashStep(shown, 1, options.length), 1)
+  assert.equal(slashStep(shown, -1, options.length), 2)
+  // Nothing highlighted: ↓ goes to the first row, ↑ to the last.
+  assert.equal(slashShownRow(options, -1, null), -1)
+  assert.equal(slashStep(-1, 1, options.length), 0)
+  assert.equal(slashStep(-1, -1, options.length), 2)
+  assert.equal(slashStep(2, 1, options.length), 0)
 })
 
 test('/model + Enter never runs a Nuphos action unless the arrows picked it', () => {

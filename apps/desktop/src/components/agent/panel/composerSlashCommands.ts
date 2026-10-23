@@ -86,7 +86,7 @@ export const SLASH_VISIBLE_ROWS = 5
  * picked always counts. Otherwise Enter only completes an agent command (the
  * highlighted one, else the first): it just fills in text, so it is safe without
  * the arrows. A Nuphos action runs, so it still needs the arrows, and a command
- * typed out in full is sent as it is.
+ * typed out in full is sent as it is, even when another row is highlighted.
  */
 export function slashEnterTarget(
   options: readonly SlashOption[],
@@ -95,11 +95,31 @@ export function slashEnterTarget(
 ): SlashOption | null {
   if (pick.armed && pick.active >= 0) return options[pick.active] ?? null
   if (options.length === 0) return null
+  const typed = query.toLowerCase()
+
+  // Wherever it sorts: a longer, more used command may be first or under the pointer.
+  if (options.some((o) => o.kind === 'agent' && o.command.name.toLowerCase() === typed)) {
+    return null
+  }
   const candidate = options[pick.active >= 0 ? pick.active : 0]
 
-  if (candidate.kind !== 'agent') return null
+  return candidate.kind === 'agent' ? candidate : null
+}
 
-  return candidate.command.name.toLowerCase() === query.toLowerCase() ? null : candidate
+/** The row the menu shows highlighted: the one picked, else the one Enter completes. */
+export function slashShownRow(
+  options: readonly SlashOption[],
+  active: number,
+  enterTarget: SlashOption | null,
+): number {
+  return active >= 0 || !enterTarget ? active : options.indexOf(enterTarget)
+}
+
+/** Where an arrow moves the highlight from `from`; with none, ↓ goes to the first row and ↑ to the last. */
+export function slashStep(from: number, step: 1 | -1, total: number): number {
+  if (from < 0) return step > 0 ? 0 : total - 1
+
+  return (from + step + total) % total
 }
 
 /**

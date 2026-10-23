@@ -4,6 +4,8 @@ import {
   matchSlashOptions,
   slashEnterTarget,
   slashKeyAction,
+  slashShownRow,
+  slashStep,
   slashToken,
   SlashCommandsContext,
 } from './composerSlashCommands'
@@ -65,6 +67,8 @@ export function useComposerSlashCommands(
       ? []
       : matchSlashOptions(agentCommands, commands, token.query, token.leading, usage)
   const enterTarget = token ? slashEnterTarget(matches, token.query, { active, armed }) : null
+  // With nothing picked yet, the row Enter would complete shows highlighted; the arrows start there.
+  const shown = slashShownRow(matches, active, enterTarget)
 
   useEffect(() => {
     if (runtimeId && listedCommands) rememberAgentCommands(runtimeId, listedCommands)
@@ -151,17 +155,10 @@ export function useComposerSlashCommands(
     const action = slashKeyAction(e.key, e.shiftKey, enterTarget !== null)
 
     if (action === 'next' || action === 'previous') {
-      const step = action === 'next' ? 1 : -1
-
       setArmed(true)
-
-      setActive((index) =>
-        index < 0 && step < 0
-          ? matches.length - 1
-          : (index + step + matches.length) % matches.length,
-      )
+      setActive(slashStep(shown, action === 'next' ? 1 : -1, matches.length))
     } else if (action === 'select') {
-      select(matches[active] ?? matches[0])
+      select(matches[shown] ?? matches[0])
     } else if (action === 'enter' && enterTarget) {
       select(enterTarget)
     } else if (action === 'dismiss') {
@@ -180,8 +177,7 @@ export function useComposerSlashCommands(
   const ui = (
     <SlashCommandPicker
       options={matches}
-      // With nothing picked yet, show the row Enter would complete.
-      active={active >= 0 || !enterTarget ? active : matches.indexOf(enterTarget)}
+      active={shown}
       follow={armed}
       anchor={anchor}
       onSelect={select}
