@@ -8,17 +8,20 @@ import {
   SlashCommandsContext,
 } from './composerSlashCommands'
 import { SlashCommandPicker } from './SlashCommandPicker'
+import { readSlashUsage, recordSlashUse, slashCommandsIn } from './slashUsage'
 
 import type { SlashCommand, SlashOption, SlashToken } from './composerSlashCommands'
 import type { AgentCommand } from '../../../lib/runtimeExecution'
 import type { KeyboardEvent as ReactKeyboardEvent, RefObject } from 'react'
 
 /**
- * Typing `/` lists the agent's own commands A to Z; at the start of a message
- * the Nuphos actions the panel provides follow (plus Model when this composer
- * has a model control). An agent command is only written into the message, in
- * place of the typed `/query`, and Enter completes the first match. A Nuphos
- * action runs only when picked. Escape keeps the menu closed until the `/` is gone.
+ * Typing `/` lists the agent's own commands, the ones this computer sends most
+ * first (then A to Z), in a strip along the top of the composer; at the start of
+ * a message the Nuphos actions the panel provides follow (plus Model when this
+ * composer has a model control). An agent command is only written into the
+ * message, in place of the typed `/query`, and Enter completes the first match.
+ * A Nuphos action runs only when picked. Escape keeps the menu closed until the
+ * `/` is gone. Sends go through `wrapSend` so the commands in them count as used.
  */
 export function useComposerSlashCommands(
   editorRef: RefObject<HTMLDivElement | null>,
@@ -35,6 +38,7 @@ export function useComposerSlashCommands(
   // Only the arrows arm Enter for any row; a pointer resting over the menu does not.
   const [armed, setArmed] = useState(false)
   const [dismissed, setDismissed] = useState(false)
+  const [usage, setUsage] = useState(readSlashUsage)
   const [anchor, setAnchor] = useState<{
     getBoundingClientRect: () => DOMRect
     contextElement: HTMLElement
@@ -48,7 +52,7 @@ export function useComposerSlashCommands(
   const matches =
     token === null || dismissed
       ? []
-      : matchSlashOptions(agentCommands, commands, token.query, token.leading)
+      : matchSlashOptions(agentCommands, commands, token.query, token.leading, usage)
   const enterTarget = token ? slashEnterTarget(matches, token.query, { active, armed }) : null
 
   function close() {
@@ -87,11 +91,10 @@ export function useComposerSlashCommands(
       return
     }
     where.current = { node: text, end: sel.anchorOffset }
-    const range = document.createRange()
+    // The strip sits on the composer itself, as wide as it, not at the caret.
+    const card = el.closest<HTMLElement>('.composer-surface') ?? el
 
-    range.setStart(text, next.start)
-    range.collapse(true)
-    setAnchor({ getBoundingClientRect: () => range.getBoundingClientRect(), contextElement: el })
+    setAnchor({ getBoundingClientRect: () => card.getBoundingClientRect(), contextElement: card })
   }
 
   function select(option: SlashOption) {
@@ -172,5 +175,15 @@ export function useComposerSlashCommands(
     />
   )
 
-  return { onInput, onKeyDown, ui }
+  /** Wraps a send so the agent commands in each sent message count as used. */
+  function wrapSend(send: (text: string, filePaths: string[]) => void) {
+    return (text: string, filePaths: string[]) => {
+      const used = slashCommandsIn(text, new Set(agentCommands.map((command) => command.name)))
+
+      if (used.length > 0) setUsage(recordSlashUse(used))
+      send(text, filePaths)
+    }
+  }
+
+  return { onInput, onKeyDown, wrapSend, ui }
 }

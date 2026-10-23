@@ -2,11 +2,13 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import {
+  SLASH_VISIBLE_ROWS,
   matchSlashCommands,
   matchSlashOptions,
   slashEnterTarget,
   slashKeyAction,
   slashToken,
+  slashWindowStart,
 } from './composerSlashCommands.ts'
 
 import type { SlashOption } from './composerSlashCommands.ts'
@@ -139,4 +141,34 @@ test('/model + Enter never runs a Nuphos action unless the arrows picked it', ()
   assert.equal(slashEnterTarget(options, 'mo', { active: -1, armed: false }), null)
   assert.equal(slashEnterTarget(options, 'mo', { active: 0, armed: false }), null)
   assert.equal(label(slashEnterTarget(options, 'mo', { active: 0, armed: true })), 'nuphos:model')
+})
+
+test('the most used commands come first, then A to Z', () => {
+  const skills = [
+    { name: 'review', description: '' },
+    { name: 'deploy', description: '' },
+    { name: 'debug', description: '' },
+    { name: 'docs', description: '' },
+  ]
+  const usage = { review: 9, docs: 2 }
+
+  assert.deepEqual(matchSlashOptions(skills, [], '', true, usage).map(label), [
+    'agent:review',
+    'agent:docs',
+    'agent:debug',
+    'agent:deploy',
+  ])
+  assert.deepEqual(matchSlashOptions(skills, [], 'de', true, usage).map(label), [
+    'agent:debug',
+    'agent:deploy',
+  ])
+})
+
+test('the menu shows three rows and scrolls to keep the active one visible', () => {
+  assert.equal(SLASH_VISIBLE_ROWS, 3)
+  assert.equal(slashWindowStart(-1, 10), 0)
+  assert.equal(slashWindowStart(2, 10), 0)
+  assert.equal(slashWindowStart(3, 10), 1)
+  assert.equal(slashWindowStart(9, 10), 7)
+  assert.equal(slashWindowStart(1, 2), 0)
 })

@@ -49,25 +49,43 @@ export function matchSlashCommands(commands: readonly SlashCommand[], query: str
   )
 }
 
-/** The agent's commands first, A to Z by name, then the Nuphos actions (only for a leading `/`). */
+/**
+ * The agent's commands first, the most used ahead (A to Z among equals), then
+ * the Nuphos actions (only for a leading `/`).
+ */
 export function matchSlashOptions(
   agent: readonly AgentCommand[],
   actions: readonly SlashCommand[],
   query: string,
   leading = true,
+  usage: Readonly<Record<string, number>> = {},
 ): SlashOption[] {
   const needle = query.toLowerCase()
+  const uses = (command: AgentCommand) => usage[command.name] ?? 0
 
   return [
     ...agent
       .filter((command) => command.name.toLowerCase().startsWith(needle))
-      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+      .sort(
+        (a, b) =>
+          uses(b) - uses(a) || a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
+      )
       .map((command) => ({ kind: 'agent' as const, command })),
     ...(leading ? matchSlashCommands(actions, query) : []).map((action) => ({
       kind: 'nuphos' as const,
       action,
     })),
   ]
+}
+
+/** Rows the menu shows at once; the arrows scroll through the rest. */
+export const SLASH_VISIBLE_ROWS = 3
+
+/** The first visible row, so the active one is always on screen. */
+export function slashWindowStart(active: number, total: number): number {
+  if (active < SLASH_VISIBLE_ROWS) return 0
+
+  return Math.min(active - SLASH_VISIBLE_ROWS + 1, Math.max(0, total - SLASH_VISIBLE_ROWS))
 }
 
 /**
