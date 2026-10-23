@@ -40,7 +40,9 @@ export function FullHistoryDialog({
   }
 
   useEffect(() => {
-    document.getElementById(`${listId}-${String(selectedIndex)}`)?.scrollIntoView({ block: 'nearest' })
+    document
+      .getElementById(`${listId}-${String(selectedIndex)}`)
+      ?.scrollIntoView({ block: 'nearest' })
   }, [listId, selectedIndex])
 
   const jump = (index: number) => {

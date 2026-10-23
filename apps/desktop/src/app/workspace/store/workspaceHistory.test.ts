@@ -100,3 +100,31 @@ test('jumping to an entry from the history menu shows it and keeps the rest', ()
   actions.openMainPage(TEAM_A, page('team.agents'))
   assert.equal(selectHistoryStep(store.getState(), 1), null)
 })
+
+test('updating the current page in place keeps Forward: A → B → Back → replace A → Forward is B', () => {
+  const { store, actions } = setup()
+
+  actions.openMainPage(TEAM_A, page('team.inbox'))
+  actions.openMainPage(TEAM_A, page('team.agents'))
+  actions.stepSurface(-1)
+  assert.equal(shown(store.getState()), 'team.inbox')
+
+  actions.updateActiveTab(page('team.inbox-search'), { history: 'replace' })
+  assert.equal(shown(store.getState()), 'team.inbox-search')
+  assert.equal(selectHistoryStep(store.getState(), 1), 'surface')
+  actions.stepSurface(1)
+  assert.equal(shown(store.getState()), 'team.agents')
+  // Back now returns to the refined page, not the one it replaced.
+  actions.stepSurface(-1)
+  assert.equal(shown(store.getState()), 'team.inbox-search')
+})
+
+test('a new navigation from an earlier entry still drops the Forward entries', () => {
+  const { store, actions } = setup()
+
+  actions.openMainPage(TEAM_A, page('team.inbox'))
+  actions.openMainPage(TEAM_A, page('team.agents'))
+  actions.stepSurface(-1)
+  actions.openMainPage(TEAM_A, page('team.runtimes'))
+  assert.equal(selectHistoryStep(store.getState(), 1), null)
+})

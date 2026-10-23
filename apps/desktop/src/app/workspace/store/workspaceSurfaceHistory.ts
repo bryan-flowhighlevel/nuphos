@@ -40,7 +40,8 @@ function entryOf(state: WorkspaceState): SurfaceEntry {
  * …). Whichever action made the change, it is undone the same way.
  *
  * A change of read-only or team in the same place rewrites its entry, and so
- * does a page `replace` (typing in a search box) or `restore`. Leaving a blank
+ * does a page `replace` (typing in a search box) or `restore`; like a browser's
+ * replaceState, that keeps the entries Forward would return to. Leaving a blank
  * New chat rewrites it too: there is nothing on it to come back to, so Back
  * from a chat started there returns to where the user was before.
  */
@@ -67,9 +68,19 @@ export function recordSurface(next: WorkspaceState, pageHistory?: TabHistoryMode
     pageHistory !== 'replace' &&
     pageHistory !== 'restore'
   const moved = !current || (!sameSurfacePlace(current, to) && !blankChat) || pageMove
-  const behind = next.surfaceHistory.slice(0, next.surfaceHistoryIndex + 1)
   // A rewrite keeps the entry's time: it marks when the user arrived there.
   const kept = current && !moved ? { ...to, at: current.at } : to
+
+  // An update in the same place is not a navigation: rewrite that entry and keep Forward.
+  if (current && !moved && sameSurfacePlace(current, to)) {
+    const surfaceHistory = next.surfaceHistory.map((entry, index) =>
+      index === next.surfaceHistoryIndex ? kept : entry,
+    )
+
+    return { ...next, surfaceHistory }
+  }
+  // Anything else goes somewhere new, so the entries ahead of the cursor go.
+  const behind = next.surfaceHistory.slice(0, next.surfaceHistoryIndex + 1)
   const surfaceHistory = (moved ? [...behind, kept] : [...behind.slice(0, -1), kept]).slice(
     -SURFACE_HISTORY_LIMIT,
   )
