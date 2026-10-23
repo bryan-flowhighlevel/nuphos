@@ -33,3 +33,15 @@ test('the animated copy adds one style block and starts each character at its ow
   }
   assert.equal(delays.size, BOT_AVATARS.length)
 })
+
+test('a hover copy plays the loop once from the start; a running copy repeats it', () => {
+  for (const file of BOT_AVATARS) {
+    const svg = shipped(file)
+    const once = withBotAvatarMotion(svg, file, false)
+
+    assert.match(once, /animation:bot-body 6s 0s 1}/, file)
+    assert.match(once, /animation:bot-eye 6s 0s 1}/, file)
+    assert.equal(once.replace(/<style>[\s\S]*<\/style>/, ''), svg, file)
+    assert.match(withBotAvatarMotion(svg, file), /animation:bot-body 6s -?[\d.]+s infinite}/, file)
+  }
+})

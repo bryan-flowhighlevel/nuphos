@@ -2,7 +2,9 @@ import { MessageSquare } from 'lucide-react'
 
 import { useAgentAppearance } from '../../lib/agentAppearance'
 import { useAgentAvatarPick } from '../../lib/agentAvatarChoices'
+import { useAgentRuntimeStates } from '../../lib/agentRuntimeStates'
 import { botAvatarFile } from '../../lib/botAvatars'
+import { runtimeTurnActive } from '../../lib/runtimeExecution'
 
 import { BotAvatarImage } from './BotAvatarImage'
 import { AgentProviderIcon } from './panel/icons'
@@ -26,11 +28,12 @@ export function AgentAvatar({
   attached?: boolean
   size?: number
   sidebar?: boolean
-  /** Plays the idle loop. Every animated avatar repaints each frame, so message rows keep it off. */
+  /** Loops the idle loop while this agent has a running turn. Message rows keep it off; hover still plays it once. */
   animated?: boolean
 }) {
   const { botAvatars, density } = useAgentAppearance()
   const seen = useAgentAvatarPick(agentId)
+  const running = runtimeTurnActive(useAgentRuntimeStates().get(agentId))
   const sidebarSize = density === 'compact' ? 22 : 30
   const box = sidebar ? sidebarSize : size
   const badge = box <= 24 ? 9 : 12
@@ -50,7 +53,7 @@ export function AgentAvatar({
         <>
           <BotAvatarImage
             file={botAvatarFile(agentId, seen === undefined ? avatar : seen)}
-            animated={animated}
+            looping={animated && running}
             className="absolute left-0 top-0 object-contain"
             style={{ width: box, height: box }}
           />

@@ -144,7 +144,7 @@ export function RenameConversationDialog({
         }}
       >
         <div className="flex flex-col items-center px-5 pt-1 pb-5">
-          <BotAvatarImage file={shown} animated className="size-16 object-contain" />
+          <BotAvatarImage file={shown} className="size-16 object-contain" />
           <span aria-live="polite" className="mt-1 h-4 text-[12px] leading-4 text-tertiary">
             {botAvatarLabel(shown)}
           </span>

@@ -80,7 +80,6 @@ export function AgentAvatarGrid({
           >
             <BotAvatarImage
               file={file}
-              animated
               className="size-8 object-contain transition-transform duration-150 ease-out group-hover/tile:scale-110 motion-reduce:transition-none motion-reduce:group-hover/tile:scale-100"
             />
           </button>

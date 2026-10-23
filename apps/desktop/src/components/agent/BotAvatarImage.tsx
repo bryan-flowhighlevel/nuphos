@@ -1,49 +1,98 @@
 import { useReducedMotion } from 'framer-motion'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
-import { animatedBotAvatarUrl, loadAnimatedBotAvatar } from '../../lib/botAvatarMotion'
+import {
+  BOT_AVATAR_LOOP_MS,
+  loopingBotAvatarUrl,
+  playOnceBotAvatarUrl,
+  readyLoopingBotAvatarUrl,
+} from '../../lib/botAvatarMotion'
 
 import type { BotAvatarFile } from '../../lib/botAvatars'
 import type React from 'react'
 
 /**
- * One bot avatar character. `animated` plays the Grok Bot style idle loop;
- * each animated image repaints every frame, so use it where it is seen.
+ * One bot avatar character, still by default. Pointing at it plays the idle loop once;
+ * `looping` repeats it, for an agent with a running turn. Reduce motion keeps it still.
+ * A still image costs nothing to paint, so a long sidebar only pays for what moves.
  */
 export function BotAvatarImage({
   file,
-  animated = false,
+  looping = false,
   className,
   style,
 }: {
   file: BotAvatarFile
-  animated?: boolean
+  looping?: boolean
   className?: string
   style?: React.CSSProperties
 }) {
-  const reduceMotion = useReducedMotion()
-  const live = animated && !reduceMotion
+  const reduceMotion = useReducedMotion() ?? false
+  const loop = looping && !reduceMotion
   const [, setLoaded] = useState(0)
-  const moving = live ? animatedBotAvatarUrl(file) : undefined
+  const [once, setOnce] = useState<{ file: BotAvatarFile; url: string }>()
+  const playing = useRef(false)
+  const mounted = useRef(true)
 
   useEffect(() => {
-    if (!live || animatedBotAvatarUrl(file)) return
+    mounted.current = true
+
+    return () => {
+      mounted.current = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!loop || readyLoopingBotAvatarUrl(file)) return
     let current = true
 
-    void loadAnimatedBotAvatar(file).then((loaded) => {
-      if (loaded && current) setLoaded((count) => count + 1)
+    void loopingBotAvatarUrl(file).then((url) => {
+      if (url && current) setLoaded((count) => count + 1)
     })
 
     return () => {
       current = false
     }
-  }, [file, live])
+  }, [file, loop])
+
+  const release = () => {
+    playing.current = false
+  }
+
+  const endPlay = (url: string) => {
+    release()
+    URL.revokeObjectURL(url)
+    if (mounted.current) setOnce((shown) => (shown?.url === url ? undefined : shown))
+  }
+
+  const playOnce = async () => {
+    if (loop || reduceMotion || playing.current) return
+    playing.current = true
+    const url = await playOnceBotAvatarUrl(file)
+
+    if (!url) {
+      release()
+
+      return
+    }
+    if (!mounted.current) {
+      endPlay(url)
+
+      return
+    }
+    setOnce({ file, url })
+    window.setTimeout(() => endPlay(url), BOT_AVATAR_LOOP_MS)
+  }
+
+  const played = once?.file === file ? once.url : undefined
+  const moving = loop ? readyLoopingBotAvatarUrl(file) : played
 
   return (
     <img
       src={moving ?? `/bot-avatars/${file}`}
       alt=""
       draggable={false}
+      onPointerEnter={() => void playOnce()}
       className={className}
       style={style}
     />
