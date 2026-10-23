@@ -20,21 +20,27 @@ export type SidebarSlot = {
 
 export function createSidebarSlot(): SidebarSlot {
   let node: ReactNode = null
+  // Bumped by every show, so a pending release knows a pane has claimed the
+  // slot since, even with the same node (an effect re-run hands over the same one).
+  let claims = 0
   const listeners = new Set<() => void>()
 
-  const show = (next: ReactNode) => {
+  const set = (next: ReactNode) => {
     if (next === node) return
     node = next
     for (const listener of listeners) listener()
   }
 
   return {
-    show,
+    show: (next) => {
+      claims += 1
+      set(next)
+    },
     release: () => {
-      const shown = node
+      const claimed = claims
 
       requestAnimationFrame(() => {
-        if (node === shown) show(null)
+        if (claims === claimed) set(null)
       })
     },
     subscribe: (listener) => {

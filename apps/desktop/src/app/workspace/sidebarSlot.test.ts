@@ -35,3 +35,14 @@ test('a released sidebar nobody takes over is cleared on the next frame', () => 
   nextFrame()
   assert.equal(slot.current(), null)
 })
+
+test('a pane that hands over the same sidebar again keeps it (an effect re-run)', () => {
+  const slot = createSidebarSlot()
+  const node = 'pane A'
+
+  slot.show(node)
+  slot.release()
+  slot.show(node)
+  nextFrame()
+  assert.equal(slot.current(), 'pane A')
+})
