@@ -119,7 +119,10 @@ test('two PRs and five terminals fold from the end as the titlebar narrows', () 
 
 test('an open PR says what holds it up; merged, closed and unblocked PRs say their state', () => {
   assert.equal(resourceStatus(resource({ health: 'checks_failed' })), 'open · checks failing')
-  assert.equal(resourceStatus(resource({ health: 'changes_requested' })), 'open · changes requested')
+  assert.equal(
+    resourceStatus(resource({ health: 'changes_requested' })),
+    'open · changes requested',
+  )
   assert.equal(resourceStatus(resource({ health: 'conflict' })), 'open · merge conflict')
   assert.equal(resourceStatus(resource({ health: null })), 'open')
   assert.equal(resourceStatus(resource({})), 'open')

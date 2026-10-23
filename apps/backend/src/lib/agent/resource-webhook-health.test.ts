@@ -13,17 +13,16 @@ let requested: string[] = []
 let checkConclusion = 'failure'
 
 useAgentDb({
-  agentConversations: () =>
-    ({
-      findOne: async () => (linked ? { _id: 'conversation' } : null),
-      updateMany: async (...args: unknown[]) => {
-        updates.push(args)
+  agentConversations: () => ({
+    findOne: async () => (linked ? { _id: 'conversation' } : null),
+    updateMany: async (...args: unknown[]) => {
+      updates.push(args)
 
-        return { modifiedCount: 1 }
-      },
-      // No session is woken in these tests.
-      find: () => ({ async *[Symbol.asyncIterator] () {} }),
-    }),
+      return { modifiedCount: 1 }
+    },
+    // No session is woken in these tests.
+    find: () => ({ async *[Symbol.asyncIterator]() {} }),
+  }),
 })
 useGithubAppAuth({ generateAppJwt: () => 'test-jwt' })
 useGithubHttp({
@@ -32,7 +31,9 @@ useGithubHttp({
     if (url.includes('/access_tokens'))
       return Response.json({ token: 'test-token', expires_at: '2099-01-01T00:00:00Z' })
     if (url.includes('/check-runs'))
-      return Response.json({ check_runs: [{ conclusion: 'success' }, { conclusion: checkConclusion }] })
+      return Response.json({
+        check_runs: [{ conclusion: 'success' }, { conclusion: checkConclusion }],
+      })
     if (url.endsWith('/status')) return Response.json({ state: 'pending', total_count: 0 })
     if (url.includes('/reviews')) return Response.json([])
 
@@ -63,7 +64,9 @@ test('a failed CI run turns a linked PR tag red', async () => {
   await routeResourceWebhook('check_suite', suite('failure'), 'delivery-1')
   expect(updates).toEqual([healthUpdate('checks_failed')])
   expect(requested).toContain('/repos/acme/app/pulls/56')
-  expect(requested).toContain(`/repos/acme/app/commits/${'a'.repeat(40)}/check-runs?filter=latest&per_page=100`)
+  expect(requested).toContain(
+    `/repos/acme/app/commits/${'a'.repeat(40)}/check-runs?filter=latest&per_page=100`,
+  )
 })
 
 test('a green re-run clears it', async () => {

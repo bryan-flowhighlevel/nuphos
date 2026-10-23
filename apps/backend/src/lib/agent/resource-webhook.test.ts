@@ -250,7 +250,12 @@ test('pushes, finished CI and reviews refresh a linked PR tag, our own included'
   config.byos.github.appSlug = 'nuphos'
   try {
     const own = { type: 'Bot', login: 'nuphos[bot]' }
-    const target = { key: 'github/12/34/56', installationId: 12, repository: 'acme/app', number: 56 }
+    const target = {
+      key: 'github/12/34/56',
+      installationId: 12,
+      repository: 'acme/app',
+      number: 56,
+    }
 
     expect(
       githubHealthTargets('pull_request', {
@@ -280,7 +285,11 @@ test('pushes, finished CI and reviews refresh a linked PR tag, our own included'
       }),
     ).toEqual([target])
     expect(
-      githubHealthTargets('pull_request', { ...base, action: 'edited', pull_request: { number: 56 } }),
+      githubHealthTargets('pull_request', {
+        ...base,
+        action: 'edited',
+        pull_request: { number: 56 },
+      }),
     ).toEqual([])
     expect(
       githubHealthTargets('pull_request', {
