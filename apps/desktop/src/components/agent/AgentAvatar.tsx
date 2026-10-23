@@ -2,8 +2,9 @@ import { MessageSquare } from 'lucide-react'
 
 import { useAgentAppearance } from '../../lib/agentAppearance'
 import { useAgentAvatarPick } from '../../lib/agentAvatarChoices'
-import { botAvatarUrl } from '../../lib/botAvatars'
+import { botAvatarFile } from '../../lib/botAvatars'
 
+import { BotAvatarImage } from './BotAvatarImage'
 import { AgentProviderIcon } from './panel/icons'
 
 import type { AgentProvider } from '../../types/runtime'
@@ -16,6 +17,7 @@ export function AgentAvatar({
   attached = true,
   size = 24,
   sidebar = false,
+  animated = false,
 }: {
   agentId: string
   /** The picked avatar as last fetched; a newer pick seen anywhere in the app wins. */
@@ -24,6 +26,8 @@ export function AgentAvatar({
   attached?: boolean
   size?: number
   sidebar?: boolean
+  /** Plays the idle loop. Every animated avatar repaints each frame, so message rows keep it off. */
+  animated?: boolean
 }) {
   const { botAvatars, density } = useAgentAppearance()
   const seen = useAgentAvatarPick(agentId)
@@ -44,10 +48,9 @@ export function AgentAvatar({
     >
       {botAvatars ? (
         <>
-          <img
-            src={botAvatarUrl(agentId, seen === undefined ? avatar : seen)}
-            alt=""
-            draggable={false}
+          <BotAvatarImage
+            file={botAvatarFile(agentId, seen === undefined ? avatar : seen)}
+            animated={animated}
             className="absolute left-0 top-0 object-contain"
             style={{ width: box, height: box }}
           />
