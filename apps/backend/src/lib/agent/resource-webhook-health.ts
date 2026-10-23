@@ -18,7 +18,15 @@ const healthPayload = z.object({
   }),
   action: z.string().max(100).optional(),
   pull_request: pr.optional(),
-  check_suite: z.object({ pull_requests: z.array(pr) }).optional(),
+  check_suite: z
+    .object({
+      pull_requests: z.array(pr),
+      head_sha: z
+        .string()
+        .regex(/^[0-9a-f]{40}$/)
+        .optional(),
+    })
+    .optional(),
 })
 
 /**
@@ -49,6 +57,27 @@ export function githubHealthTargets(event: string, payload: unknown) {
     repository: body.repository.full_name!,
     number,
   }))
+}
+
+/**
+ * A finished check suite GitHub tied to no PR. A fork head's suite always has
+ * empty `pull_requests`, so its PRs have to be found from the commit.
+ */
+export function githubUnattachedSuiteCommit(event: string, payload: unknown) {
+  const parsed = healthPayload.safeParse(payload)
+
+  if (event !== 'check_suite' || !parsed.success) return null
+  const { action, check_suite: suite, installation, repository } = parsed.data
+
+  if (action !== 'completed' || !suite?.head_sha || suite.pull_requests.length) return null
+  if (!repository.full_name) return null
+
+  return {
+    installationId: installation.id,
+    repositoryId: repository.id,
+    repository: repository.full_name,
+    sha: suite.head_sha,
+  }
 }
 
 /** A linked PR to refresh; a status event knows the repository but not the number, so it comes from the key. */

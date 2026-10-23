@@ -62,6 +62,23 @@ async function getJson<T>(token: string, path: string): Promise<T | null> {
   return (await response.json()) as T
 }
 
+const REVIEW_PAGES = 20
+
+/** Every page of a 100-per-page list, in order; null when a page is unreadable. */
+async function getPages<T>(token: string, path: string): Promise<T[] | null> {
+  const items: T[] = []
+
+  for (let page = 1; page <= REVIEW_PAGES; page++) {
+    const batch = await getJson<T[]>(token, `${path}?per_page=100&page=${String(page)}`)
+
+    if (!batch) return null
+    items.push(...batch)
+    if (batch.length < 100) break
+  }
+
+  return items
+}
+
 type PullSummary = { state: string; mergeable_state?: string | null; head: { sha: string } }
 
 /**
@@ -89,9 +106,10 @@ export async function fetchPullHealth(
       token,
       `/repos/${repository}/commits/${sha}/status`,
     ),
-    getJson<{ user: { login: string } | null; state: string }[]>(
+    // Oldest first, so a reviewer's later approval can sit past the first page.
+    getPages<{ user: { login: string } | null; state: string }>(
       token,
-      `/repos/${repository}/pulls/${String(number)}/reviews?per_page=100`,
+      `/repos/${repository}/pulls/${String(number)}/reviews`,
     ),
   ])
 
