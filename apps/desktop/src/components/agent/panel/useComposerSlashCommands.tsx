@@ -1,4 +1,4 @@
-import { useContext, useRef, useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 
 import {
   matchSlashOptions,
@@ -8,7 +8,13 @@ import {
   SlashCommandsContext,
 } from './composerSlashCommands'
 import { SlashCommandPicker } from './SlashCommandPicker'
-import { readSlashUsage, recordSlashUse, slashCommandsIn } from './slashUsage'
+import {
+  readAgentCommands,
+  readSlashUsage,
+  recordSlashUse,
+  rememberAgentCommands,
+  slashCommandsIn,
+} from './slashUsage'
 
 import type { SlashCommand, SlashOption, SlashToken } from './composerSlashCommands'
 import type { AgentCommand } from '../../../lib/runtimeExecution'
@@ -18,19 +24,24 @@ import type { KeyboardEvent as ReactKeyboardEvent, RefObject } from 'react'
  * Typing `/` lists the agent's own commands, the ones this computer sends most
  * first (then A to Z), in a strip along the top of the composer; at the start of
  * a message the Nuphos actions the panel provides follow (plus Model when this
- * composer has a model control). An agent command is only written into the
- * message, in place of the typed `/query`, and Enter completes the first match.
- * A Nuphos action runs only when picked. Escape keeps the menu closed until the
- * `/` is gone. Sends go through `wrapSend` so the commands in them count as used.
+ * composer has a model control). Before a session lists its commands (a new
+ * conversation has none yet), the ones its agent listed last stand in. An
+ * agent command is only written into the message, in place of the typed
+ * `/query`, and Enter completes the first match. A Nuphos action runs only when
+ * picked. Escape keeps the menu closed until the `/` is gone. Sends go through
+ * `wrapSend` so the commands in them count as used.
  */
 export function useComposerSlashCommands(
   editorRef: RefObject<HTMLDivElement | null>,
   composingRef: RefObject<boolean>,
   onEdited: () => void,
   openModel?: () => void,
-  agentCommands: readonly AgentCommand[] = [],
+  agent: { commands?: readonly AgentCommand[]; runtimeId?: string } = {},
 ) {
+  const { commands: listedCommands, runtimeId } = agent
   const panelCommands = useContext(SlashCommandsContext)
+  const [remembered, setRemembered] = useState(() => readAgentCommands(runtimeId))
+  const agentCommands = listedCommands ?? remembered
   const [token, setToken] = useState<SlashToken | null>(null)
   // The text node and caret offset the token was read from, for the replacement.
   const where = useRef<{ node: Text; end: number } | null>(null)
@@ -54,6 +65,10 @@ export function useComposerSlashCommands(
       ? []
       : matchSlashOptions(agentCommands, commands, token.query, token.leading, usage)
   const enterTarget = token ? slashEnterTarget(matches, token.query, { active, armed }) : null
+
+  useEffect(() => {
+    if (runtimeId && listedCommands) rememberAgentCommands(runtimeId, listedCommands)
+  }, [runtimeId, listedCommands])
 
   function close() {
     setToken(null)
@@ -90,6 +105,8 @@ export function useComposerSlashCommands(
 
       return
     }
+    // The agent may have listed its commands, or been switched, since this composer opened.
+    if (token === null && !listedCommands) setRemembered(readAgentCommands(runtimeId))
     where.current = { node: text, end: sel.anchorOffset }
     // The strip sits on the composer itself, as wide as it, not at the caret.
     const card = el.closest<HTMLElement>('.composer-surface') ?? el
@@ -165,6 +182,7 @@ export function useComposerSlashCommands(
       options={matches}
       // With nothing picked yet, show the row Enter would complete.
       active={active >= 0 || !enterTarget ? active : matches.indexOf(enterTarget)}
+      follow={armed}
       anchor={anchor}
       onSelect={select}
       onActive={(index) => {

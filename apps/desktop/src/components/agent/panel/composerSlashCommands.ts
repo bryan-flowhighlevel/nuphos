@@ -78,15 +78,8 @@ export function matchSlashOptions(
   ]
 }
 
-/** Rows the menu shows at once; the arrows scroll through the rest. */
-export const SLASH_VISIBLE_ROWS = 3
-
-/** The first visible row, so the active one is always on screen. */
-export function slashWindowStart(active: number, total: number): number {
-  if (active < SLASH_VISIBLE_ROWS) return 0
-
-  return Math.min(active - SLASH_VISIBLE_ROWS + 1, Math.max(0, total - SLASH_VISIBLE_ROWS))
-}
+/** Rows the menu is tall; the rest scroll, by wheel or by the arrows. */
+export const SLASH_VISIBLE_ROWS = 5
 
 /**
  * The row plain Enter picks, or null when Enter should send. A row the arrows

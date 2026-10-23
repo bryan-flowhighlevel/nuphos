@@ -2,13 +2,11 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import {
-  SLASH_VISIBLE_ROWS,
   matchSlashCommands,
   matchSlashOptions,
   slashEnterTarget,
   slashKeyAction,
   slashToken,
-  slashWindowStart,
 } from './composerSlashCommands.ts'
 
 import type { SlashOption } from './composerSlashCommands.ts'
@@ -165,13 +163,4 @@ test('the most used commands come first, then A to Z', () => {
     'agent:debug',
     'agent:deploy',
   ])
-})
-
-test('the menu shows three rows and scrolls to keep the active one visible', () => {
-  assert.equal(SLASH_VISIBLE_ROWS, 3)
-  assert.equal(slashWindowStart(-1, 10), 0)
-  assert.equal(slashWindowStart(2, 10), 0)
-  assert.equal(slashWindowStart(3, 10), 1)
-  assert.equal(slashWindowStart(9, 10), 7)
-  assert.equal(slashWindowStart(1, 2), 0)
 })

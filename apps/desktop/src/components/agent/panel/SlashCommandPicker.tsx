@@ -1,5 +1,7 @@
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
+
 import { ComposerPicker, ComposerPickerRow } from './composerPicker'
-import { SLASH_VISIBLE_ROWS, slashWindowStart } from './composerSlashCommands'
+import { SLASH_VISIBLE_ROWS } from './composerSlashCommands'
 
 import type { SlashOption } from './composerSlashCommands'
 import type { Popover } from '@base-ui/react/popover'
@@ -32,14 +34,24 @@ function OptionRow({ option }: { option: SlashOption }) {
   )
 }
 
+/** Five rows tall, down to the fifth row's bottom, whether descriptions take one line or two. */
+function fitRows(list: HTMLElement | null) {
+  if (!list) return
+  const fifth = list.children[SLASH_VISIBLE_ROWS - 1]
+  const more = list.children.length > SLASH_VISIBLE_ROWS && fifth instanceof HTMLElement
+
+  list.style.maxHeight = more ? `${String(fifth.offsetTop + fifth.offsetHeight)}px` : ''
+}
+
 /**
- * The `/` menu: a strip along the top of the composer, as wide as it, showing
- * a few rows at a time with what each command does. The arrows scroll through
- * the rest.
+ * The `/` menu: a strip along the top of the composer, as wide as it, five
+ * rows tall with what each command does. The rest scroll, by wheel or by the
+ * arrows, which keep the highlighted row in view.
  */
 export function SlashCommandPicker({
   options,
   active,
+  follow,
   anchor,
   onSelect,
   onActive,
@@ -47,13 +59,30 @@ export function SlashCommandPicker({
 }: {
   options: SlashOption[]
   active: number
+  /** The arrows moved the highlight, so the list scrolls to it. */
+  follow: boolean
   anchor: Popover.Positioner.Props['anchor']
   onSelect: (option: SlashOption) => void
   onActive: (index: number) => void
   onClose: () => void
 }) {
-  const start = slashWindowStart(active, options.length)
-  const shown = options.slice(start, start + SLASH_VISIBLE_ROWS)
+  const list = useRef<HTMLDivElement | null>(null)
+  // Refit when the popup settles to the composer's width, which rewraps the rows.
+  const attach = useCallback((el: HTMLDivElement | null) => {
+    list.current = el
+    if (!el) return
+    const observer = new ResizeObserver(() => fitRows(el))
+
+    observer.observe(el)
+
+    return () => observer.disconnect()
+  }, [])
+
+  useLayoutEffect(() => fitRows(list.current), [options])
+
+  useEffect(() => {
+    if (follow) list.current?.children[active]?.scrollIntoView({ block: 'nearest' })
+  }, [active, follow])
 
   return (
     <ComposerPicker
@@ -63,19 +92,21 @@ export function SlashCommandPicker({
       className="w-[var(--anchor-width)]"
       onClose={onClose}
     >
-      {shown.map((option, i) => (
-        <ComposerPickerRow
-          key={option.kind === 'agent' ? `agent:${option.command.name}` : option.action.id}
-          selected={start + i === active}
-          onSelect={() => onSelect(option)}
-          onActive={() => onActive(start + i)}
-        >
-          <OptionRow option={option} />
-        </ComposerPickerRow>
-      ))}
+      <div ref={attach} className="relative overflow-y-auto">
+        {options.map((option, i) => (
+          <ComposerPickerRow
+            key={option.kind === 'agent' ? `agent:${option.command.name}` : option.action.id}
+            selected={i === active}
+            onSelect={() => onSelect(option)}
+            onActive={() => onActive(i)}
+          >
+            <OptionRow option={option} />
+          </ComposerPickerRow>
+        ))}
+      </div>
       {options.length > SLASH_VISIBLE_ROWS && (
         <div className="px-2 pb-0.5 pt-1 text-[10.5px] text-tertiary">
-          {start + 1}–{start + shown.length} of {options.length} · ↑↓ for more
+          {options.length} commands · scroll or ↑↓ for more
         </div>
       )}
     </ComposerPicker>

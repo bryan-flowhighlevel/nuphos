@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { readSlashUsage, recordSlashUse, slashCommandsIn } from './slashUsage.ts'
+import {
+  readAgentCommands,
+  readSlashUsage,
+  recordSlashUse,
+  rememberAgentCommands,
+  slashCommandsIn,
+} from './slashUsage.ts'
 
 function memoryStorage(initial: Record<string, string> = {}) {
   const data = new Map(Object.entries(initial))
@@ -34,4 +40,37 @@ test('a sent message uses the known commands written as /name', () => {
 
   assert.deepEqual(slashCommandsIn('/review then /deploy', known), ['review', 'deploy'])
   assert.deepEqual(slashCommandsIn('see a/review and /usr/bin and /other', known), [])
+})
+
+test('a new conversation offers the commands its agent listed last', () => {
+  const store = memoryStorage()
+  const review = { name: 'review', description: 'Review the diff' }
+
+  assert.deepEqual(readAgentCommands('rt-1', store), [])
+  rememberAgentCommands('rt-1', [review], store)
+  rememberAgentCommands('rt-2', [{ name: 'ship', description: '', hint: 'branch' }], store)
+  assert.deepEqual(readAgentCommands('rt-1', store), [review])
+  assert.deepEqual(readAgentCommands('rt-2', store), [
+    { name: 'ship', description: '', hint: 'branch' },
+  ])
+  rememberAgentCommands('rt-1', [], store)
+  assert.deepEqual(readAgentCommands('rt-1', store), [])
+  assert.deepEqual(readAgentCommands(undefined, store), [])
+})
+
+test('unreadable or odd remembered commands read as none', () => {
+  assert.deepEqual(readAgentCommands('rt-1', null), [])
+  assert.deepEqual(
+    readAgentCommands('rt-1', memoryStorage({ 'nuphos.agentCommands.v1': 'nope' })),
+    [],
+  )
+  assert.deepEqual(
+    readAgentCommands(
+      'rt-1',
+      memoryStorage({
+        'nuphos.agentCommands.v1': '{"rt-1":[{"name":"ok","description":""},{"name":1}]}',
+      }),
+    ),
+    [{ name: 'ok', description: '' }],
+  )
 })

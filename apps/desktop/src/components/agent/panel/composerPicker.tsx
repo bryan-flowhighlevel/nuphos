@@ -53,7 +53,11 @@ export function ComposerPicker({
   )
 }
 
-/** One option. Mouse-down selects without taking focus (and the caret) from the editor. */
+/**
+ * One option. Mouse-down selects without taking focus (and the caret) from the
+ * editor. Only a moving pointer highlights a row: one resting over the list must
+ * not take the highlight from the arrows as the rows scroll under it.
+ */
 export function ComposerPickerRow({
   selected,
   onSelect,
@@ -77,7 +81,7 @@ export function ComposerPickerRow({
         e.preventDefault()
         onSelect()
       }}
-      onMouseEnter={onActive}
+      onMouseMove={selected ? undefined : onActive}
     >
       {children}
     </div>
