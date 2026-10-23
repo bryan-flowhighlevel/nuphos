@@ -160,6 +160,12 @@ export function teamPageLocation(
 
     return pageLocation(`/teams/${pathSegment(scope.teamId)}/files${query}`)
   }
+  if (active === 'team.artifact') {
+    // One tab per artifact, opened from its card in the chat; there is no list page.
+    const base = `/teams/${pathSegment(scope.teamId)}/artifacts`
+
+    return pageLocation(navigation.filter ? `${base}/${pathSegment(navigation.filter)}` : base)
+  }
   if (active === 'team.terminal') {
     const base = `/teams/${pathSegment(scope.teamId)}/terminal`
 

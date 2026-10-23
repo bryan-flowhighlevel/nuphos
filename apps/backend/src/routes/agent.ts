@@ -18,10 +18,12 @@ import './agent/routes-devices'
 import './agent/routes-device-runtime'
 
 import { agent } from './agent/router'
+import { artifactShareRoutes } from './agent/routes-artifact-shares'
 import { conversationParticipantsRoutes } from './agent/routes-conversation-participants'
 import { sessionConfigRoutes } from './agent/routes-session-config'
 
 agent.route('/', conversationParticipantsRoutes)
+agent.route('/', artifactShareRoutes)
 agent.route('/', sessionConfigRoutes)
 
 export { chatSurfaceMessage } from './agent/chat-surface'

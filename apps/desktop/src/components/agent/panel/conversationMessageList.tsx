@@ -4,6 +4,7 @@ import { Fragment, useEffect, useMemo } from 'react'
 import { runtimeAllows, runtimeIsExecuting } from '../../../lib/runtimeExecution'
 import { publishSessionDesktops } from '../../../lib/sessionDesktops'
 import { useReportVisibleError } from '../../VisibleErrorReporter'
+import { usePublishSessionArtifacts } from '../artifacts/useSessionArtifacts'
 
 import { conversationActivity } from './activity'
 import { toolAnchorIds } from './chatTarget'
@@ -73,6 +74,7 @@ export function ConversationMessageList({
     if (teamId) publishSessionDesktops(tab.sessionId, sessionDesktopsOf(teamId, tab))
   }, [tab.sessionId, teamId, tab.runtimeState, tab.foreign])
   useEffect(() => () => publishSessionDesktops(tab.sessionId, null), [tab.sessionId])
+  usePublishSessionArtifacts(tab.sessionId, tab.messages)
   const downloadsByMessage = useTransferDownloads(tab, teamId, hasEarlier)
   const messages = useMemo(() => collapseRepeatedFailures(tab.messages), [tab.messages])
   const timeline = placeTimelineEvents(messages, tab.timelineEvents, hasEarlier)

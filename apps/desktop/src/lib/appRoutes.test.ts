@@ -74,6 +74,10 @@ const CASES: { name: string; nav: NavigationSnapshot }[] = [
       filter: '/workspace/src/報告 1.md',
     }),
   },
+  {
+    name: 'artifact',
+    nav: emptyNavigation({ kind: 'team', teamId: T }, 'team.artifact', { filter: 'q3-report' }),
+  },
   { name: 'terminal', nav: emptyNavigation({ kind: 'team', teamId: T }, 'team.terminal') },
   {
     name: 'runtime terminal',

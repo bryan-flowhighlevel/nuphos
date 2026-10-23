@@ -1,4 +1,5 @@
 import type { ConversationAccessState, GeneralAccess, ParticipantRole } from './agent-types.ts'
+import type { ArtifactShareInput, ArtifactShareResponse } from './artifact-share-types.ts'
 import type { SessionResourcesResponse } from './session-resource-types'
 
 /** Who may open a session and what they may do there. */
@@ -40,4 +41,20 @@ export type WindowSessionAccessApi = {
     avatar: string | null,
     teamId?: string,
   ): Promise<{ avatar: string | null }>
+  agentGetArtifactShare(
+    sessionId: string,
+    artifactId: string,
+    teamId: string,
+  ): Promise<ArtifactShareResponse>
+  agentPublishArtifactShare(
+    sessionId: string,
+    artifactId: string,
+    teamId: string,
+    input: ArtifactShareInput,
+  ): Promise<ArtifactShareResponse>
+  agentUnpublishArtifactShare(
+    sessionId: string,
+    artifactId: string,
+    teamId: string,
+  ): Promise<ArtifactShareResponse>
 }

@@ -1,3 +1,4 @@
+export * from './agent/artifact-share'
 export * from './agent/audit'
 export * from './agent/auto-mode'
 export * from './agent/chat'
