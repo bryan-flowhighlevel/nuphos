@@ -15,7 +15,6 @@ import { useChatSummaryOpen } from '../../lib/chatSummaryPanel'
 import { hasCloudOnboardingBinding } from '../../lib/connectorCategories'
 import { isLocalAgentRuntime } from '../../lib/localAgentSharing'
 
-import { PaneCloseButton } from './PaneCloseButton'
 import { PaneGrip } from './PaneGrip'
 import { SessionFindBar } from './SessionFindBar'
 import { useSessionHeading } from './useSessionHeading'
@@ -33,7 +32,8 @@ export function WorkspaceAgentPane({
   user: UserInfo
   workspaceExpanded?: boolean
 }) {
-  const paneActive = useWorkspacePane()?.active ?? true
+  const pane = useWorkspacePane()
+  const paneActive = pane?.active ?? true
   const {
     accounts,
     activeKubeContext,
@@ -231,10 +231,10 @@ export function WorkspaceAgentPane({
               onRename={() => setRenamingSessionId(selectedSessionId)}
               onFork={() => setAgentSidebarPendingFork(selectedSessionId)}
               canFork={!selectedSessionReadOnly}
+              onClosePane={pane?.split ? pane.closePane : undefined}
             />
           )}
           {savedSessionId && <ChatSummaryToggle active={paneActive && !ws.mainPageOpen} />}
-          <PaneCloseButton />
           {/* The rest of the header moves the window, so a pane moves by its grip. Electron cuts
             no-drag holes in page order, so the grip comes after the drag area it sits over. */}
           <PaneGrip label={currentHeading.title} />

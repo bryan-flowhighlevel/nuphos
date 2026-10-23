@@ -11,6 +11,7 @@ import {
   Pencil,
   Pin,
   PinOff,
+  X,
 } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
@@ -58,6 +59,8 @@ type Props = {
   onFork: () => void
   /** False for read-only (audit) views, which must never offer a fork. */
   canFork: boolean
+  /** Closes this pane of a split window, as ⌘W does; absent when it is the only pane. */
+  onClosePane?: () => void
 }
 
 function findPin(userId: string, teamId: string, sessionId: string) {
@@ -92,6 +95,7 @@ export function SessionHeaderMenu({
   onRename,
   onFork,
   canFork,
+  onClosePane,
 }: Props) {
   const { archiving, archive } = useArchiveSession({ sessionId, teamId, title })
   const pin = useSessionPin(userId, teamId, sessionId)
@@ -239,6 +243,18 @@ export function SessionHeaderMenu({
               onClick={() => void archive()}
             >
               {archiving ? 'Archiving…' : 'Archive agent'}
+            </MenuItem>
+          </>
+        )}
+        {onClosePane && (
+          <>
+            <MenuSeparator />
+            <MenuItem
+              icon={<X className="h-3.5 w-3.5" />}
+              hint={<ShortcutHint combo="mod+w" className="pl-4" />}
+              onClick={onClosePane}
+            >
+              Close pane
             </MenuItem>
           </>
         )}
