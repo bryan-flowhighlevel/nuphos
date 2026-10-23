@@ -128,12 +128,15 @@ export function segmentParts(parts: readonly Part[], from: number, to: number): 
   return segments
 }
 
-/** Plan and decision cards: lifted out of a folded turn so they sit under the answer. */
+/** Plan, decision and artifact cards: lifted out of a folded turn so they sit under the answer. */
 export function isLiftedCardPart(part: Part): part is ToolPart {
   if (part.type !== 'tool' || part.state === 'output-error') return false
 
   return (
-    part.toolName === 'plan' || isPlanProposalToolName(part.toolName) || isDecisionCardPart(part)
+    part.toolName === 'plan' ||
+    part.toolName === 'render_artifact' ||
+    isPlanProposalToolName(part.toolName) ||
+    isDecisionCardPart(part)
   )
 }
 
