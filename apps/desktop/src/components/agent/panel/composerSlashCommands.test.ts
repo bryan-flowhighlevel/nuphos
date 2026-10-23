@@ -101,7 +101,10 @@ test("the agent's commands are listed A to Z", () => {
     'agent:jeun-deploy',
     'agent:review',
   ])
-  assert.deepEqual(matchSlashOptions(skills, [], 'je').map(label), ['agent:Jeun', 'agent:jeun-deploy'])
+  assert.deepEqual(matchSlashOptions(skills, [], 'je').map(label), [
+    'agent:Jeun',
+    'agent:jeun-deploy',
+  ])
 })
 
 test('mid-message, the menu offers only the agent commands', () => {
