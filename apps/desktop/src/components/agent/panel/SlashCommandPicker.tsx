@@ -14,21 +14,22 @@ function OptionRow({ option }: { option: SlashOption }) {
 
   return (
     <>
-      <span className="flex w-[34%] min-w-0 max-w-[240px] shrink-0 items-baseline gap-1.5">
-        <span className="truncate font-mono text-[12.5px] text-main">{name}</span>
+      <span className="flex w-[28%] min-w-0 max-w-[210px] shrink-0 items-baseline gap-1.5">
+        <span className="truncate font-mono text-[12px] leading-4 text-main">{name}</span>
         {nuphos && (
           // Nuphos actions run when picked, so they never pass for something the agent runs.
-          <span className="shrink-0 rounded bg-zGray-800/60 px-1 text-[10px] text-tertiary">
+          <span className="shrink-0 rounded bg-zGray-800/60 px-1 text-[10px] leading-4 text-tertiary">
             Nuphos
           </span>
         )}
-        {hint && <span className="truncate text-[11px] text-tertiary">{hint}</span>}
+        {hint && <span className="truncate text-[10.5px] leading-4 text-tertiary">{hint}</span>}
       </span>
-      {/* Two lines tall even for a short description, so five rows always fit. */}
-      <span className="flex h-[34px] min-w-0 flex-1 items-center">
-        <span className="line-clamp-2 text-[12px] leading-[17px] text-tertiary" title={description}>
-          {description}
-        </span>
+      {/* One line; the rest of a long description shows on hover. */}
+      <span
+        className="min-w-0 flex-1 truncate text-[11.5px] leading-4 text-tertiary"
+        title={description}
+      >
+        {description}
       </span>
     </>
   )
@@ -45,8 +46,8 @@ function fitRows(list: HTMLElement | null) {
 
 /**
  * The `/` menu: a strip along the top of the composer, as wide as it, five
- * rows tall with what each command does. The rest scroll, by wheel or by the
- * arrows, which keep the highlighted row in view.
+ * one-line rows tall with what each command does. The rest scroll, by wheel or
+ * by the arrows, which keep the highlighted row in view.
  */
 export function SlashCommandPicker({
   options,
@@ -92,6 +93,7 @@ export function SlashCommandPicker({
           <ComposerPickerRow
             key={option.kind === 'agent' ? `agent:${option.command.name}` : option.action.id}
             selected={i === active}
+            compact
             onSelect={() => onSelect(option)}
             onActive={() => onActive(i)}
           >
@@ -99,11 +101,6 @@ export function SlashCommandPicker({
           </ComposerPickerRow>
         ))}
       </div>
-      {options.length > SLASH_VISIBLE_ROWS && (
-        <div className="px-2 pb-0.5 pt-1 text-[10.5px] text-tertiary">
-          {options.length} commands · scroll or ↑↓ for more
-        </div>
-      )}
     </ComposerPicker>
   )
 }
