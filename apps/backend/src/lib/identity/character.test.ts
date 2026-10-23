@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb'
 
 import {
   activeDaysPipeline,
+  UNATTRIBUTED_BEFORE,
   levelForActiveDays,
   readProfileLevel,
   setProfileCharacter,
@@ -69,28 +70,37 @@ test('the level counts distinct days the person sent a message themselves', asyn
   days = 30
   expect((await readProfileLevel('u1', 'America/Los_Angeles')).level).toBe(7)
   expect(pipeline).toEqual(activeDaysPipeline('u1', 'America/Los_Angeles'))
-  const [match, group] = pipeline as [
-    { $match: { role: string; $or: Record<string, unknown>[] } },
+  const [match, project, group] = pipeline as [
+    { $match: { $or: Record<string, unknown>[] } },
+    { $project: Record<string, number> },
     { $group: { _id: { $dateToString: { timezone: string } } } },
   ]
 
-  expect(match.$match.role).toBe('user')
   // Agent tokens acting for them are not them; unattributed history belongs to the owner.
   expect(match.$match.$or).toEqual([
     {
       'metadata.sender.type': 'user',
       'metadata.sender.id': 'u1',
       'metadata.sender.onBehalfOf': { $exists: false },
+      role: 'user',
     },
-    { userId: 'u1', metadata: { $exists: false } },
+    {
+      userId: 'u1',
+      role: 'user',
+      createdAt: { $lt: UNATTRIBUTED_BEFORE },
+      metadata: { $exists: false },
+    },
   ])
+  // Only the timestamp travels to the grouping, never the message parts.
+  expect(project.$project).toEqual({ _id: 0, createdAt: 1 })
   expect(group.$group._id.$dateToString.timezone).toBe('America/Los_Angeles')
 })
 
 test('an unknown time zone falls back to UTC and no messages is level 1', async () => {
   days = undefined
   expect(await readProfileLevel('u1', 'Mars/Olympus')).toMatchObject({ activeDays: 0, level: 1 })
-  const [, group] = pipeline as [
+  const [, , group] = pipeline as [
+    unknown,
     unknown,
     { $group: { _id: { $dateToString: { timezone: string } } } },
   ]

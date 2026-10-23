@@ -64,6 +64,8 @@ export async function setupAgentIndexes(): Promise<void> {
       { 'metadata.sender.id': 1, createdAt: 1 },
       { background: true, partialFilterExpression: { 'metadata.sender.type': 'user' } },
     )
+    // Profile level, messages stored before attribution: a fixed range that never grows.
+    await m.createIndex({ userId: 1, role: 1, createdAt: 1 }, { background: true })
     // Admin feedback feed: rated messages only, newest votes first.
     await m.createIndex(
       { 'feedback.rating': 1, 'feedback.updatedAt': -1 },

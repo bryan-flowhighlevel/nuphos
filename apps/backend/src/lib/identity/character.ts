@@ -85,26 +85,39 @@ function validTimeZone(timeZone: string | undefined): string {
 }
 
 /**
+ * Every user message written since this date carries `metadata.sender`; Discord
+ * and Lark were the last to gain it (#149, merged 2026-10-10). Older messages
+ * may have none, and for those the conversation owner is the author.
+ */
+export const UNATTRIBUTED_BEFORE = new Date('2026-10-12T00:00:00Z')
+
+/**
  * Distinct days, in the person's time zone, on which they sent a message
  * themselves. An agent token acting for them does not count, and neither does
- * a turn they did not write. Messages stored before attribution carry no
- * sender, so for those the conversation owner is the author.
+ * a turn they did not write. Each branch has its own index, and the
+ * unattributed one is capped at a fixed date, so the cost stops growing.
  */
 export function activeDaysPipeline(userId: string, timeZone?: string) {
   return [
     {
       $match: {
-        role: 'user',
         $or: [
           {
             'metadata.sender.type': 'user',
             'metadata.sender.id': userId,
             'metadata.sender.onBehalfOf': { $exists: false },
+            role: 'user',
           },
-          { userId, metadata: { $exists: false } },
+          {
+            userId,
+            role: 'user',
+            createdAt: { $lt: UNATTRIBUTED_BEFORE },
+            metadata: { $exists: false },
+          },
         ],
       },
     },
+    { $project: { _id: 0, createdAt: 1 } },
     {
       $group: {
         _id: {
