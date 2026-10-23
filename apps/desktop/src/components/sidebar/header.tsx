@@ -1,5 +1,7 @@
 import { ChevronRight, ChevronsUpDown, Loader2, LogOut, Settings } from 'lucide-react'
 
+import { usePendingPick } from '../../hooks/usePendingPick'
+import { shownCharacter } from '../../lib/profileCharacterSync'
 import { Avatar } from '../Avatar'
 import { ProfileCharacterImage } from '../ProfileCharacterImage'
 import { SkeletonReveal } from '../SkeletonReveal'
@@ -175,7 +177,10 @@ function TeamSwitcherMenu({
 
 /** The person's own picture: their profile character once picked, else their photo or initials. */
 function UserPicture({ user, name, size }: { user: UserInfo; name: string; size: number }) {
-  if (!user.character)
+  // A pick still waiting on this computer shows here too, as it does in the profile ring.
+  const character = shownCharacter(user, usePendingPick(user.id))
+
+  if (!character)
     return (
       <Avatar
         src={user.avatarURL}
@@ -190,7 +195,7 @@ function UserPicture({ user, name, size }: { user: UserInfo; name: string; size:
       className="flex-shrink-0 overflow-hidden rounded-full bg-zViolet-accent/10"
       style={{ width: size, height: size }}
     >
-      <ProfileCharacterImage character={user.character} className="h-full w-full" />
+      <ProfileCharacterImage character={character} className="h-full w-full" />
     </span>
   )
 }

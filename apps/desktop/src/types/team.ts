@@ -26,6 +26,9 @@ export type ProfileLevel = {
   levelSize: number
 }
 
+/** Saving a character: the updated user, or `unsupported` when the server has no such route yet. */
+export type SetCharacterResult = { user: UserInfo } | { unsupported: true }
+
 export type AuthStatus = { loggedIn: false } | { loggedIn: true; user: UserInfo; token: string }
 
 export type PersonalCredentialProvider = 'github' | 'linear'

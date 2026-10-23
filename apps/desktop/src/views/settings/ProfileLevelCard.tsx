@@ -1,10 +1,16 @@
 import clsx from 'clsx'
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 
 import { api } from '../../api'
 import { Avatar } from '../../components/Avatar'
 import { ProfileCharacterImage } from '../../components/ProfileCharacterImage'
-import { toast } from '../../components/ui/toast'
+import { notifyPendingPick, usePendingPick } from '../../hooks/usePendingPick'
+import {
+  pendingPick,
+  pendingPickKey,
+  savePick,
+  shownCharacter,
+} from '../../lib/profileCharacterSync'
 import {
   daysToNextLevel,
   hairstyleLabel,
@@ -24,8 +30,9 @@ import type { ProfileCharacter, ProfileLevel, UserInfo } from '../../types'
 const RING_RADIUS = 52
 const RING_LENGTH = 2 * Math.PI * RING_RADIUS
 
+/** The level, or `unavailable` when the server cannot give one; the character works either way. */
 function useProfileLevel(userId: string) {
-  const [level, setLevel] = useState<ProfileLevel | null>(null)
+  const [level, setLevel] = useState<ProfileLevel | 'loading' | 'unavailable'>('loading')
   const [levelledUp, setLevelledUp] = useState(false)
 
   useEffect(() => {
@@ -35,14 +42,21 @@ function useProfileLevel(userId: string) {
       .authReadLevel(Intl.DateTimeFormat().resolvedOptions().timeZone)
       .then((next) => {
         if (!current) return
+        // A server without the level route yet: the level parts stay hidden.
+        if (!next) {
+          setLevel('unavailable')
+
+          return
+        }
         const key = seenLevelKey(userId)
 
         setLevelledUp(reachedNewLevel(localStorage.getItem(key), next.level))
         localStorage.setItem(key, String(next.level))
         setLevel(next)
       })
-      .catch((err: unknown) => {
-        if (current) toast.apiError('Could not load your level', err)
+      .catch(() => {
+        // Offline or a server error: say so quietly rather than counting forever.
+        if (current) setLevel('unavailable')
       })
 
     return () => {
@@ -50,7 +64,60 @@ function useProfileLevel(userId: string) {
     }
   }, [userId])
 
-  return { level, levelledUp }
+  return { level: typeof level === 'object' ? level : null, status: level, levelledUp }
+}
+
+type PickNote =
+  { kind: 'saved' | 'kept-here'; text: string } | { kind: 'failed'; character: ProfileCharacter }
+
+/**
+ * Picks show at once and are kept on this computer until the server takes them. A
+ * server without the character route keeps the pick here and syncs it on a later
+ * visit; any other failure says so with a Retry.
+ */
+function useCharacterPick(user: UserInfo, onUserUpdated: (user: UserInfo) => void) {
+  const pending = usePendingPick(user.id)
+  const [note, setNote] = useState<PickNote | null>(null)
+  const latest = useRef<ProfileCharacter | null>(null)
+
+  async function pick(next: ProfileCharacter) {
+    latest.current = next
+    const outcome = savePick(next, user.id, { storage: localStorage, send: api.authSetCharacter })
+
+    notifyPendingPick()
+    const result = await outcome
+
+    notifyPendingPick()
+    if (latest.current !== next) return
+    if (result.kind === 'saved') onUserUpdated(result.user)
+    if (result.kind === 'saved')
+      setNote({ kind: 'saved', text: `Saved · ${profileCharacterLabel(next)}` })
+    else if (result.kind === 'kept-here')
+      setNote({ kind: 'kept-here', text: 'Saved on this computer' })
+    else setNote({ kind: 'failed', character: next })
+  }
+
+  // A pick kept here earlier goes up quietly once the server can take it.
+  useEffect(() => {
+    const waiting = pendingPick(localStorage, user.id)
+
+    if (!waiting) return
+    if (waiting === user.character) {
+      localStorage.removeItem(pendingPickKey(user.id))
+      notifyPendingPick()
+
+      return
+    }
+    void savePick(waiting, user.id, { storage: localStorage, send: api.authSetCharacter }).then(
+      (result) => {
+        notifyPendingPick()
+        if (result.kind === 'saved') onUserUpdated(result.user)
+      },
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per person, not on every pick
+  }, [user.id])
+
+  return { chosen: shownCharacter(user, pending), note, pick }
 }
 
 /** The person's character inside a ring that fills with XP, their level on the ring. */
@@ -63,35 +130,24 @@ export function ProfileLevelCard({
   displayName: string
   onUserUpdated: (user: UserInfo) => void
 }) {
-  const { level, levelledUp } = useProfileLevel(user.id)
-  const [saving, setSaving] = useState<ProfileCharacter | null>(null)
+  const { level, status, levelledUp } = useProfileLevel(user.id)
+  const { chosen, note, pick } = useCharacterPick(user, onUserUpdated)
   const [preview, setPreview] = useState<ProfileCharacter | null>(null)
-  const [savedNote, setSavedNote] = useState('')
   const gradientId = useId()
-  const chosen = saving ?? user.character
   const character = preview ?? chosen
   const progress = level ? levelProgress(level) : 0
   const daysLeft = level ? daysToNextLevel(level) : 0
 
-  async function pick(next: ProfileCharacter) {
-    if (next === user.character || saving) return
-    setSaving(next)
+  function choose(next: ProfileCharacter) {
     setPreview(null)
-    try {
-      onUserUpdated(await api.authSetCharacter(next))
-      setSavedNote(`Saved · ${profileCharacterLabel(next)}`)
-    } catch (err) {
-      toast.apiError('Could not change your character', err)
-    } finally {
-      setSaving(null)
-    }
+    if (next !== chosen || note?.kind === 'failed') void pick(next)
   }
 
-  const hint = !chosen
-    ? 'Pick a character below.'
-    : preview && preview !== chosen
-      ? `Previewing ${hairstyleLabel(preview)}`
-      : savedNote
+  let hint = ''
+
+  if (!chosen) hint = 'Pick a character below.'
+  else if (preview && preview !== chosen) hint = `Previewing ${hairstyleLabel(preview)}`
+  else if (note && note.kind !== 'failed') hint = note.text
 
   return (
     <div>
@@ -171,19 +227,33 @@ export function ProfileLevelCard({
                 </span>
               </>
             ) : (
-              <span className="text-tertiary">Counting your days…</span>
+              <span className="text-tertiary">
+                {status === 'loading' ? 'Counting your days…' : 'Level unavailable'}
+              </span>
             )}
           </div>
-          <div aria-live="polite" className="mt-0.5 h-[18px] text-[12.5px] text-tertiary">
-            {hint}
-          </div>
+          {note?.kind === 'failed' && !preview ? (
+            <div
+              role="alert"
+              className="mt-0.5 flex h-[18px] items-center gap-2 text-[12.5px] text-red-400"
+            >
+              Couldn't save your character.
+              <button
+                type="button"
+                onClick={() => void pick(note.character)}
+                className="font-medium text-zViolet-accent underline-offset-2 hover:underline"
+              >
+                Retry
+              </button>
+            </div>
+          ) : (
+            <div aria-live="polite" className="mt-0.5 h-[18px] text-[12.5px] text-tertiary">
+              {hint}
+            </div>
+          )}
         </div>
       </div>
-      <ProfileCharacterPicker
-        value={chosen}
-        onPick={(next) => void pick(next)}
-        onPreview={setPreview}
-      />
+      <ProfileCharacterPicker value={chosen} onPick={choose} onPreview={setPreview} />
     </div>
   )
 }
