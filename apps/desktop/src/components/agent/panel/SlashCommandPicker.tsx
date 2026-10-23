@@ -24,17 +24,17 @@ function OptionRow({ option }: { option: SlashOption }) {
         )}
         {hint && <span className="truncate text-[11px] text-tertiary">{hint}</span>}
       </span>
-      <span
-        className="line-clamp-2 min-w-0 flex-1 text-[12px] leading-[17px] text-tertiary"
-        title={description}
-      >
-        {description}
+      {/* Two lines tall even for a short description, so five rows always fit. */}
+      <span className="flex h-[34px] min-w-0 flex-1 items-center">
+        <span className="line-clamp-2 text-[12px] leading-[17px] text-tertiary" title={description}>
+          {description}
+        </span>
       </span>
     </>
   )
 }
 
-/** Five rows tall, down to the fifth row's bottom, whether descriptions take one line or two. */
+/** Five rows tall: down to the fifth row's bottom. */
 function fitRows(list: HTMLElement | null) {
   if (!list) return
   const fifth = list.children[SLASH_VISIBLE_ROWS - 1]
@@ -67,15 +67,10 @@ export function SlashCommandPicker({
   onClose: () => void
 }) {
   const list = useRef<HTMLDivElement | null>(null)
-  // Refit when the popup settles to the composer's width, which rewraps the rows.
+  // The popup mounts its rows after this renders, so they are fitted on mount too.
   const attach = useCallback((el: HTMLDivElement | null) => {
     list.current = el
-    if (!el) return
-    const observer = new ResizeObserver(() => fitRows(el))
-
-    observer.observe(el)
-
-    return () => observer.disconnect()
+    fitRows(el)
   }, [])
 
   useLayoutEffect(() => fitRows(list.current), [options])
