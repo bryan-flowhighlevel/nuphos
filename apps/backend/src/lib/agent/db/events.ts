@@ -59,6 +59,11 @@ export async function setupAgentIndexes(): Promise<void> {
     await m.createIndex({ userId: 1, updatedAt: -1 }, { background: true })
     // Tail of a conversation without knowing whose turn wrote it (stuck-turn probe).
     await m.createIndex({ sessionId: 1, index: -1 }, { background: true })
+    // Profile level: the days a person sent a message themselves.
+    await m.createIndex(
+      { 'metadata.sender.id': 1, createdAt: 1 },
+      { background: true, partialFilterExpression: { 'metadata.sender.type': 'user' } },
+    )
     // Admin feedback feed: rated messages only, newest votes first.
     await m.createIndex(
       { 'feedback.rating': 1, 'feedback.updatedAt': -1 },

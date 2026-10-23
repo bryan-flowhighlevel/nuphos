@@ -14,6 +14,7 @@ import { getDeletionRequest, requestAccountDeletion } from '@/lib/identity/accou
 import { readAIConsent, saveAIConsent } from '@/lib/identity/ai-consent'
 import { MAX_AVATAR_UPLOAD_BYTES, removeAvatar, uploadAvatar } from '@/lib/identity/avatar-upload'
 import { signInWithPassword, setPasswordWithEmailCode } from '@/lib/identity/password'
+import { readProfileLevel, setProfileCharacter } from '@/lib/identity/character'
 import { updateProfile } from '@/lib/identity/profile'
 import {
   abandonNativeSession,
@@ -50,6 +51,14 @@ auth.put('/ai-consent', requireAuth, async (c) =>
 
 auth.patch('/me', requireAuth, async (c) =>
   c.json(await updateProfile(c.get('userId'), await c.req.json())),
+)
+
+auth.put('/me/character', requireAuth, async (c) =>
+  c.json(await setProfileCharacter(c.get('userId'), await c.req.json().catch(() => null))),
+)
+
+auth.get('/me/level', requireAuth, async (c) =>
+  c.json(await readProfileLevel(c.get('userId'), c.req.query('timeZone'))),
 )
 
 export const avatarBodyLimit = bodyLimit({

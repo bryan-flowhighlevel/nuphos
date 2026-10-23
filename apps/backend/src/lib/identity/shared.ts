@@ -21,6 +21,8 @@ export type NuphosUserDoc = {
   passwordHash?: string
   sessionsInvalidBefore?: number
   profileEdited?: boolean
+  /** The person's profile character; absent until they pick one. */
+  character?: 'boy' | 'girl'
   googleID?: string
   createdAt: Date
   updatedAt: Date
@@ -71,6 +73,7 @@ export function mapUser(user: NuphosUserDoc): NuphosUser {
     avatarURL: user.avatarURL,
     language: user.language,
     createdAt: user.createdAt.toISOString(),
+    ...(user.character ? { character: user.character } : {}),
   }
 }
 

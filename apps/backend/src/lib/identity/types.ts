@@ -8,6 +8,7 @@ export type NuphosUser = {
   avatarURL: string
   language: string
   createdAt: string
+  character?: 'boy' | 'girl'
 }
 
 export type NuphosTeamRole = 'ADMINISTRATOR' | 'EDITOR' | 'VIEWER'
