@@ -1,6 +1,6 @@
 import { Toggle } from '@base-ui/react/toggle'
 import { ToggleGroup } from '@base-ui/react/toggle-group'
-import { ChevronLeft, ChevronRight, Code2, Copy, Download, Eye, Wrench } from 'lucide-react'
+import { Code2, Copy, Download, Eye, Wrench } from 'lucide-react'
 import { createPortal } from 'react-dom'
 
 import { useToolbarSlot } from '../../../hooks/useToolbarControls'
@@ -10,31 +10,22 @@ import { Tooltip } from '../../ui/tooltip'
 import { copySource, downloadArtifact, fixPrompt } from './artifactActions'
 import { artifactFileName, artifactKindLabel } from './artifactPayload'
 import { ArtifactShareButton } from './ArtifactShareButton'
+import { MoreMenu, VersionStepper } from './ArtifactToolbarParts'
 
 import type { ArtifactVersion } from './artifactPayload'
+import type { ToolbarDensity } from './toolbarDensity'
 import type { ArtifactShareState } from './useArtifactShare'
 
 export type ArtifactViewMode = 'preview' | 'source'
 
+export type { ToolbarDensity } from './toolbarDensity'
+
 const SEGMENT =
   'inline-flex h-[26px] w-8 items-center justify-center text-secondary outline-none transition-colors hover:text-main focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zViolet-accent data-[pressed]:bg-zGray-800 data-[pressed]:text-main'
 
-/**
- * The title takes whatever room is left, so it is the last thing to shorten.
- * Everything else is a fixed-size control with its name in a tooltip.
- */
-export function ArtifactToolbar({
-  active,
-  line,
-  current,
-  view,
-  errors,
-  share,
-  onView,
-  onStep,
-  onAskAgent,
-}: {
+export type ArtifactToolbarProps = {
   active: boolean
+  density: ToolbarDensity
   line: readonly ArtifactVersion[]
   current: ArtifactVersion
   view: ArtifactViewMode
@@ -43,9 +34,14 @@ export function ArtifactToolbar({
   onView: (view: ArtifactViewMode) => void
   onStep: (version: ArtifactVersion) => void
   onAskAgent: (prompt: string) => void
-}) {
+}
+
+/** The title takes whatever room is left, so it is the last thing to shorten. */
+export function ArtifactToolbar(props: ArtifactToolbarProps) {
+  const { active, density, line, current, errors, onAskAgent } = props
   const leftSlot = useToolbarSlot('left', active)
   const rightSlot = useToolbarSlot('right', active)
+  const steps = stepsOf(line, current)
 
   return (
     <>
@@ -58,14 +54,22 @@ export function ArtifactToolbar({
             >
               {current.title}
             </span>
-            <VersionStepper line={line} current={current} onStep={onStep} />
+            {density !== 'tiny' && line.length > 1 && (
+              <VersionStepper
+                {...steps}
+                current={current}
+                total={line.length}
+                short={density === 'compact'}
+                onStep={props.onStep}
+              />
+            )}
           </div>,
           leftSlot,
         )}
       {rightSlot &&
         createPortal(
           <div className="flex shrink-0 items-center gap-1">
-            {errors.length > 0 && (
+            {density !== 'tiny' && errors.length > 0 && (
               <Tooltip content={`Ask the agent to fix: ${errors.join(' · ')}`}>
                 <Button
                   variant="ghost"
@@ -82,52 +86,19 @@ export function ArtifactToolbar({
                 </Button>
               </Tooltip>
             )}
-            {current.kind !== 'code' && (
-              <ToggleGroup
-                value={[view]}
-                onValueChange={(value) => {
-                  const chosen = value[0] as ArtifactViewMode | undefined
-
-                  if (chosen) onView(chosen)
-                }}
-                aria-label="Show"
-                className="mr-1 inline-flex divide-x divide-zGray-800 overflow-hidden rounded-md border border-zGray-800"
-              >
-                <Tooltip content="Preview">
-                  <Toggle value="preview" aria-label="Preview" className={SEGMENT}>
-                    <Eye className="h-3.5 w-3.5" />
-                  </Toggle>
-                </Tooltip>
-                <Tooltip content="Code">
-                  <Toggle value="source" aria-label="Code" className={SEGMENT}>
-                    <Code2 className="h-3.5 w-3.5" />
-                  </Toggle>
-                </Tooltip>
-              </ToggleGroup>
+            {density !== 'tiny' && current.kind !== 'code' && (
+              <ViewToggle view={props.view} onView={props.onView} />
             )}
-            <Tooltip content={`Copy the ${artifactKindLabel(current).toLowerCase()} source`}>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="h-7 w-7"
-                aria-label="Copy"
-                onClick={() => void copySource(current)}
-              >
-                <Copy className="h-3.5 w-3.5" />
-              </Button>
-            </Tooltip>
-            <Tooltip content={`Download ${artifactFileName(current)}`}>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="mr-1 h-7 w-7"
-                aria-label="Download"
-                onClick={() => downloadArtifact(current)}
-              >
-                <Download className="h-3.5 w-3.5" />
-              </Button>
-            </Tooltip>
-            <ArtifactShareButton current={current} state={share} />
+            {density === 'full' ? (
+              <InlineActions current={current} />
+            ) : (
+              <MoreMenu {...props} {...steps} />
+            )}
+            <ArtifactShareButton
+              current={current}
+              state={props.share}
+              iconOnly={density !== 'full'}
+            />
           </div>,
           rightSlot,
         )}
@@ -135,47 +106,72 @@ export function ArtifactToolbar({
   )
 }
 
-function VersionStepper({
-  line,
-  current,
-  onStep,
-}: {
-  line: readonly ArtifactVersion[]
-  current: ArtifactVersion
-  onStep: (version: ArtifactVersion) => void
-}) {
-  if (line.length < 2) return null
+function stepsOf(line: readonly ArtifactVersion[], current: ArtifactVersion) {
   const index = line.indexOf(current)
-  const previous = index > 0 ? line.at(index - 1) : undefined
-  const next = line.at(index + 1)
 
+  return {
+    previous: index > 0 ? line.at(index - 1) : undefined,
+    next: line.at(index + 1),
+  }
+}
+
+function ViewToggle({
+  view,
+  onView,
+}: {
+  view: ArtifactViewMode
+  onView: (view: ArtifactViewMode) => void
+}) {
   return (
-    <div className="flex shrink-0 items-center" role="group" aria-label="Versions">
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label="Previous version"
-        disabled={!previous}
-        onClick={() => previous && onStep(previous)}
-      >
-        <ChevronLeft className="h-3.5 w-3.5" />
-      </Button>
-      <span
-        className="whitespace-nowrap px-0.5 text-[12px] tabular-nums text-secondary"
-        aria-live="polite"
-        title={`Version ${String(current.version)} of ${String(line.length)}`}
-      >
-        v{current.version} of {line.length}
-      </span>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label="Next version"
-        disabled={!next}
-        onClick={() => next && onStep(next)}
-      >
-        <ChevronRight className="h-3.5 w-3.5" />
-      </Button>
-    </div>
+    <ToggleGroup
+      value={[view]}
+      onValueChange={(value) => {
+        const chosen = value[0] as ArtifactViewMode | undefined
+
+        if (chosen) onView(chosen)
+      }}
+      aria-label="Show"
+      className="mr-1 inline-flex shrink-0 divide-x divide-zGray-800 overflow-hidden rounded-md border border-zGray-800"
+    >
+      <Tooltip content="Preview">
+        <Toggle value="preview" aria-label="Preview" className={SEGMENT}>
+          <Eye className="h-3.5 w-3.5" />
+        </Toggle>
+      </Tooltip>
+      <Tooltip content="Code">
+        <Toggle value="source" aria-label="Code" className={SEGMENT}>
+          <Code2 className="h-3.5 w-3.5" />
+        </Toggle>
+      </Tooltip>
+    </ToggleGroup>
+  )
+}
+
+function InlineActions({ current }: { current: ArtifactVersion }) {
+  return (
+    <>
+      <Tooltip content={`Copy the ${artifactKindLabel(current).toLowerCase()} source`}>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="h-7 w-7"
+          aria-label="Copy"
+          onClick={() => void copySource(current)}
+        >
+          <Copy className="h-3.5 w-3.5" />
+        </Button>
+      </Tooltip>
+      <Tooltip content={`Download ${artifactFileName(current)}`}>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="mr-1 h-7 w-7"
+          aria-label="Download"
+          onClick={() => downloadArtifact(current)}
+        >
+          <Download className="h-3.5 w-3.5" />
+        </Button>
+      </Tooltip>
+    </>
   )
 }

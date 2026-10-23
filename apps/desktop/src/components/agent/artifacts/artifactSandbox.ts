@@ -30,8 +30,19 @@ else if(/^javascript:/i.test(href)){event.preventDefault()}
 },true);
 })();`
 
-  return `<meta charset="utf-8"><base target="_blank"><script>${script}</script>`
+  return `<base target="_blank"><script>${script}</script>`
 }
+
+// Same as the share page's raw documents (backend artifact-share-documents.ts):
+// a viewport when the page brought none, and defaults that keep media inside a
+// narrow pane. :where() gives them no specificity, so the artifact's rules win.
+const VIEWPORT =
+  '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
+const RESPONSIVE_DEFAULTS =
+  '<style>:where(html){-webkit-text-size-adjust:100%;text-size-adjust:100%}' +
+  ':where(img,video,canvas){max-width:100%;height:auto}' +
+  ':where(svg,iframe,embed,object,table){max-width:100%}:where(pre){overflow-x:auto}</style>'
+const HAS_VIEWPORT = /<meta\b[^>]*\bname\s*=\s*["']?viewport\b/i
 
 // Only what may come before a document's content: blanks, comments, the
 // doctype and the opening <html> and <head> tags. A "<head>" further in (in a
@@ -44,7 +55,8 @@ const PROLOGUE = new RegExp(
 
 /** The artifact's markup with the bootstrap ahead of everything it loads. */
 export function artifactSrcDoc(html: string, channel: string): string {
-  const boot = bootstrap(channel)
+  const viewport = HAS_VIEWPORT.test(html) ? '' : VIEWPORT
+  const boot = `<meta charset="utf-8">${viewport}${RESPONSIVE_DEFAULTS}${bootstrap(channel)}`
   const prologue = PROLOGUE.exec(html)
   const [opening = '', doctype, openHtml, openHead] = prologue ?? []
   const rest = html.slice(opening.length)

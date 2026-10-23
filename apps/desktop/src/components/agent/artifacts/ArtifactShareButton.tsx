@@ -21,21 +21,25 @@ function openLink(url: string) {
 export function ArtifactShareButton({
   current,
   state,
+  iconOnly = false,
 }: {
   current: ArtifactVersion
   state: ArtifactShareState
+  /** A narrow dock keeps the globe and drops the word. */
+  iconOnly?: boolean
 }) {
   const { share, canShare } = state
+  const triggerLabel = share ? 'Shared' : 'Share'
 
   return (
     <Popover.Root>
       <Popover.Trigger
-        className={TRIGGER}
+        className={clsx(TRIGGER, iconOnly && 'w-7 justify-center px-0')}
         disabled={!canShare}
         title={share ? 'Shared on the web' : 'Share this artifact on the web'}
       >
         <Globe className="h-3.5 w-3.5" strokeWidth={1.8} />
-        {share ? 'Shared' : 'Share'}
+        {iconOnly ? <span className="sr-only">{triggerLabel}</span> : triggerLabel}
         {share && (
           <span
             aria-hidden

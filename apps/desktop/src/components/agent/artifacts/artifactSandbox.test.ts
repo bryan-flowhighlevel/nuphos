@@ -53,8 +53,20 @@ test('a comment before the head does not hide it', () => {
     'c',
   )
 
-  assert.ok(doc.includes('<head><meta charset="utf-8"><base target="_blank">'))
+  assert.ok(doc.includes('<head><meta charset="utf-8"><meta name="viewport"'))
   assert.ok(doc.indexOf('<base') < doc.indexOf('<title>'))
+})
+
+test('a page gets a viewport only when it brought none, and defaults it can override', () => {
+  const bare = artifactSrcDoc('<!doctype html><html><head><title>T</title></head></html>', 'c')
+  const own = artifactSrcDoc(
+    '<html><head><meta name="viewport" content="width=600"></head></html>',
+    'c',
+  )
+
+  assert.ok(bare.includes('content="width=device-width,initial-scale=1,viewport-fit=cover"'))
+  assert.ok(!own.includes('viewport-fit=cover'))
+  assert.ok(bare.includes(':where(img,video,canvas){max-width:100%;height:auto}'))
 })
 
 test('only messages on the frame’s own channel are read', () => {
