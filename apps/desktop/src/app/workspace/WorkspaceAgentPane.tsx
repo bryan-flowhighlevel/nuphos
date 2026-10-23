@@ -36,6 +36,7 @@ export function WorkspaceAgentPane({
 }) {
   const pane = useWorkspacePane()
   const paneActive = pane?.active ?? true
+  const paneInFront = paneActive && !ws.mainPageOpen
   const {
     accounts,
     activeKubeContext,
@@ -173,8 +174,7 @@ export function WorkspaceAgentPane({
             dockOpen ? 'pr-3' : 'pr-12',
           )}
         >
-          {/* The native drag rectangle sits beside Share, so hit testing never needs a
-            no-drag hole inside it. It clips, or a narrow pane's chips would cover Share. */}
+          {/* Drag area sits beside Share (no no-drag hole); it clips so chips never cover Share. */}
           <div
             key={`heading-${selectedSessionId ?? 'home'}`}
             className="t-session-heading titlebar-drag flex min-w-0 flex-1 self-stretch items-center gap-2 overflow-hidden text-[13px] font-medium text-secondary"
@@ -222,7 +222,7 @@ export function WorkspaceAgentPane({
               compact={compact}
             />
           )}
-          {savedSessionId ? (
+          {savedSessionId && (
             <SessionHeaderMenu
               key={`menu-${savedSessionId}`}
               sessionId={savedSessionId}
@@ -239,12 +239,9 @@ export function WorkspaceAgentPane({
               onClosePane={pane?.split ? pane.closePane : undefined}
               summaryInMenu={tight}
             />
-          ) : (
-            pane?.split && <PaneMenu onClosePane={pane.closePane} />
           )}
-          {savedSessionId && (
-            <ChatSummaryToggle active={paneActive && !ws.mainPageOpen} hidden={tight} />
-          )}
+          {!savedSessionId && pane?.split && <PaneMenu onClosePane={pane.closePane} />}
+          {savedSessionId && <ChatSummaryToggle active={paneInFront} hidden={tight} />}
           {/* The rest of the header moves the window, so a pane moves by its grip. Electron cuts
             no-drag holes in page order, so the grip comes after the drag area it sits over. */}
           <PaneGrip label={currentHeading.title} />
@@ -252,7 +249,7 @@ export function WorkspaceAgentPane({
         <SessionFindBar
           key={selectedSessionId ?? 'home'}
           rootRef={transcriptRef}
-          active={paneActive && !ws.mainPageOpen && !workspaceExpanded}
+          active={paneInFront && !workspaceExpanded}
         />
         <div className="@container relative flex min-h-0 min-w-0 flex-1">
           <div ref={transcriptRef} className="flex min-h-0 min-w-0 flex-1">
