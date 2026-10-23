@@ -2,7 +2,7 @@ import clsx from 'clsx'
 import { Check } from 'lucide-react'
 import { useRef } from 'react'
 
-import { ProfileCharacterImage } from '../../components/ProfileCharacterImage'
+import { ProfileCharacterImage } from './ProfileCharacterImage'
 import {
   PROFILE_HAIRSTYLES,
   PROFILE_LOOKS,
@@ -10,10 +10,10 @@ import {
   hairstyleLabel,
   profileLook,
   profileLookLabel,
-} from '../../lib/profileLevel'
+} from '../lib/profileLevel'
 
-import type { ProfileLook } from '../../lib/profileLevel'
-import type { ProfileCharacter } from '../../types'
+import type { ProfileLook } from '../lib/profileLevel'
+import type { ProfileCharacter } from '../types'
 import type React from 'react'
 
 const STEPS: Partial<Record<string, number>> = {
@@ -86,9 +86,9 @@ export function ProfileCharacterPicker({
   const styles = look ? PROFILE_HAIRSTYLES[look] : []
 
   return (
-    <div className="mt-5 grid gap-3">
+    <div className="grid gap-3">
       <div className="flex items-center gap-3.5">
-        <span className="w-16 text-[12.5px] text-tertiary">1 · You</span>
+        <span className="w-14 text-[12.5px] text-tertiary">1 · You</span>
         <div
           role="radiogroup"
           aria-label="Boy or girl"
@@ -124,7 +124,7 @@ export function ProfileCharacterPicker({
       </div>
       {look && (
         <div className="flex items-center gap-3.5">
-          <span className="w-16 text-[12.5px] text-tertiary">2 · Hair</span>
+          <span className="w-14 text-[12.5px] text-tertiary">2 · Hair</span>
           <div
             role="radiogroup"
             aria-label="Hairstyle"

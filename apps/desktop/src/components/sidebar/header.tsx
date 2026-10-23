@@ -3,6 +3,7 @@ import { ChevronRight, ChevronsUpDown, Loader2, LogOut, Settings } from 'lucide-
 import { usePendingPick } from '../../hooks/usePendingPick'
 import { shownCharacter } from '../../lib/profileCharacterSync'
 import { Avatar } from '../Avatar'
+import { SidebarCharacter } from './SidebarCharacter'
 import { ProfileCharacterImage } from '../ProfileCharacterImage'
 import { SkeletonReveal } from '../SkeletonReveal'
 import { Kbd } from '../ui/kbd'
@@ -84,6 +85,9 @@ type TeamSwitcherActions = {
   onOpenSettings?: () => void
   onOpenMyPreferences?: () => void
   onCreateTeam?: () => void
+  /** The signed-in person: their character takes the workspace tile's place. */
+  user?: UserInfo | null
+  onUserUpdated?: (user: UserInfo) => void
 }
 
 /** The team switcher, revealed from its skeleton once the team segment loads. */
@@ -106,21 +110,34 @@ function TeamSwitcherMenu({
   onOpenSettings,
   onOpenMyPreferences,
   onCreateTeam,
+  user,
+  onUserUpdated,
 }: TeamSwitcherActions & { teamSegment: BreadcrumbSegment }) {
+  const tile = (
+    <span className="flex items-center flex-shrink-0 [&>*]:!h-5 [&>*]:!w-5 [&>svg]:!h-5 [&>svg]:!w-5">
+      {teamSegment.icon}
+    </span>
+  )
+  // The person's character sits beside the switcher, not inside it, so each opens on its own.
+  const character = user && onUserUpdated && !teamSegment.loading
+
   return (
-    <div className="px-2.5 pb-1.5 titlebar-no-drag">
+    <div className="px-2.5 pb-1.5 titlebar-no-drag flex items-center gap-1">
+      {character && (
+        <span className="flex h-9 flex-none items-center pl-1.5">
+          <SidebarCharacter user={user} fallback={tile} onUserUpdated={onUserUpdated} />
+        </span>
+      )}
       <Menu
         onOpenChange={(open) => {
           if (open) teamSegment.onExpand?.()
         }}
       >
-        <MenuTrigger className="w-full h-9 flex items-center gap-2.5 px-2 rounded-md text-[13.5px] transition-colors outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:bg-[var(--sidebar-overlay-focus)] hover:bg-[var(--sidebar-overlay-hover)] text-main data-[popup-open]:bg-[var(--sidebar-overlay-active)]">
+        <MenuTrigger className="min-w-0 flex-1 h-9 flex items-center gap-2.5 px-2 rounded-md text-[13.5px] transition-colors outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:bg-[var(--sidebar-overlay-focus)] hover:bg-[var(--sidebar-overlay-hover)] text-main data-[popup-open]:bg-[var(--sidebar-overlay-active)]">
           {teamSegment.loading ? (
             <Loader2 className="w-3.5 h-3.5 flex-shrink-0 animate-spin text-zViolet-accent" />
           ) : (
-            <span className="flex items-center flex-shrink-0 [&>*]:!h-5 [&>*]:!w-5 [&>svg]:!h-5 [&>svg]:!w-5">
-              {teamSegment.icon}
-            </span>
+            !character && tile
           )}
           <span className="truncate flex-1 text-left font-medium">{teamSegment.label}</span>
           {!teamSegment.loading && (

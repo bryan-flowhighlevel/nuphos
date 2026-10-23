@@ -3,7 +3,6 @@ import { useState } from 'react'
 import { api } from '../../api'
 import { Button } from '../../components/ui/button'
 
-import { ProfileLevelCard } from './ProfileLevelCard'
 import { ProfilePhoto } from './ProfilePhoto'
 import { Field, SectionHeader } from './shared'
 import { inputClasses } from './styles'
@@ -57,13 +56,6 @@ export function ProfileSection({
         title="Profile"
         description="Your account, shared across every team you belong to."
       />
-      <div className="mb-8">
-        <ProfileLevelCard
-          user={user}
-          displayName={user.name || user.username}
-          onUserUpdated={onUserUpdated}
-        />
-      </div>
       <form onSubmit={(event) => void save(event)} className="space-y-5">
         <ProfilePhoto user={user} displayName={name || username} onUserUpdated={onUserUpdated} />
         <fieldset disabled={saving} className="space-y-4">

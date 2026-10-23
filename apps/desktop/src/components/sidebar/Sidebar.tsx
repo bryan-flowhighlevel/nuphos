@@ -38,6 +38,7 @@ export const Sidebar = memo(function Sidebar({
   scopeChipForPath,
   kubeconfigContext = null,
   user,
+  onUserUpdated,
   onLogout,
   grafanaInstance,
   teamSegment,
@@ -204,6 +205,8 @@ export const Sidebar = memo(function Sidebar({
         <SidebarTeamSwitcher
           teamSegment={teamSegment}
           loading={teamSkeleton}
+          user={user}
+          onUserUpdated={onUserUpdated}
           onOpenSettings={onOpenSettings}
           onOpenMyPreferences={onOpenMyPreferences}
           onCreateTeam={onCreateTeam}
