@@ -39,8 +39,7 @@ export function ActivePaneSidebar({
   useLayoutEffect(() => {
     pane.sidebar.show(node)
   })
-  // Unmounts run before the next active pane's effects, so its sidebar replaces this one.
-  useLayoutEffect(() => () => pane.sidebar.show(null), [pane.sidebar])
+  useLayoutEffect(() => () => pane.sidebar.release(), [pane.sidebar])
 
   return null
 }
