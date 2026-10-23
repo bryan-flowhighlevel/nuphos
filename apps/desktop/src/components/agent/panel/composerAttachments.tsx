@@ -47,10 +47,10 @@ export function AttachmentChips({
           return (
             <div key={filePath} data-attachment-path={filePath} className="contents">
               <ImageAttachmentThumb
-              url={imageThumbs[filePath]}
-              fileName={fileNameFromPath(filePath)}
-              badge={`#${String(images.indexOf(filePath) + 1)}`}
-              onRemove={removeAttachment}
+                url={imageThumbs[filePath]}
+                fileName={fileNameFromPath(filePath)}
+                badge={`#${String(images.indexOf(filePath) + 1)}`}
+                onRemove={removeAttachment}
                 onOpen={() => setPreview(previewable.indexOf(filePath))}
               />
             </div>

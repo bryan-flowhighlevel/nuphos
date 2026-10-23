@@ -44,7 +44,13 @@ test('a page image dropped into the editor is blocked; text and files are not', 
   const html = '<img src="blob:x">'
 
   assert.equal(isRichImageDrop(fakeTransfer({ 'text/html': html })), true)
-  assert.equal(isRichImageDrop(fakeTransfer({ 'text/html': '<b>hi</b>', 'text/plain': 'hi' })), false)
+  assert.equal(
+    isRichImageDrop(fakeTransfer({ 'text/html': '<b>hi</b>', 'text/plain': 'hi' })),
+    false,
+  )
   assert.equal(isRichImageDrop(fakeTransfer({ 'text/html': html }, true)), false)
-  assert.equal(isRichImageDrop(fakeTransfer({ 'text/html': html, [ATTACHMENT_DRAG_TYPE]: '[]' })), false)
+  assert.equal(
+    isRichImageDrop(fakeTransfer({ 'text/html': html, [ATTACHMENT_DRAG_TYPE]: '[]' })),
+    false,
+  )
 })
