@@ -115,6 +115,9 @@ export function SessionHeaderMenu({
   // Rename waits for the popup to finish closing; otherwise focus returning to
   // the trigger blurs the title input, and blur saves and closes it.
   const renameOnClose = useRef(false)
+  // Closing the pane waits too: the menu hands focus back to its trigger in this
+  // pane, which would make the closed pane the active one again.
+  const closePaneOnClose = useRef(false)
 
   function togglePin() {
     if (pin) {
@@ -163,7 +166,12 @@ export function SessionHeaderMenu({
   return (
     <Menu
       onOpenChangeComplete={(open) => {
-        if (open || !renameOnClose.current) return
+        if (open) return
+        if (closePaneOnClose.current) {
+          closePaneOnClose.current = false
+          onClosePane?.()
+        }
+        if (!renameOnClose.current) return
         renameOnClose.current = false
         onRename()
       }}
@@ -252,7 +260,9 @@ export function SessionHeaderMenu({
             <MenuItem
               icon={<X className="h-3.5 w-3.5" />}
               hint={<ShortcutHint combo="mod+w" className="pl-4" />}
-              onClick={onClosePane}
+              onClick={() => {
+                closePaneOnClose.current = true
+              }}
             >
               Close pane
             </MenuItem>
