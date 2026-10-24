@@ -1,9 +1,9 @@
 import { ChevronRight, ChevronsUpDown, Loader2, LogOut, Settings } from 'lucide-react'
+import { useState } from 'react'
 
 import { usePendingPick } from '../../hooks/usePendingPick'
 import { shownCharacter } from '../../lib/profilePickSync'
 import { Avatar } from '../Avatar'
-import { SidebarCharacter } from './SidebarCharacter'
 import { ProfileCharacterImage } from '../ProfileCharacterImage'
 import { SkeletonReveal } from '../SkeletonReveal'
 import { Kbd } from '../ui/kbd'
@@ -20,10 +20,11 @@ import { renderWorkspaceMenuOptions } from '../WorkspaceMenuOptions'
 
 import { SidebarHistoryButtons } from './history-buttons'
 import { SidebarToggleButton } from './nav-stack'
+import { WorkspaceBadge } from './WorkspaceBadge'
 
 import type { AgentConversation } from '../../api'
 import type { HistoryTimeline } from './historyRows'
-import type { UserInfo } from '../../types'
+import type { ProfileCharacter, UserInfo } from '../../types'
 import type { BreadcrumbSegment } from '../Toolbar'
 
 /**
@@ -86,7 +87,7 @@ type TeamSwitcherActions = {
   onOpenSettings?: () => void
   onOpenMyPreferences?: () => void
   onCreateTeam?: () => void
-  /** The signed-in person: their character takes the workspace tile's place. */
+  /** The signed-in person, whose chosen stat rings the workspace icon. */
   user?: UserInfo | null
   onUserUpdated?: (user: UserInfo) => void
   /** This workspace and its sessions, for the stat on the character's badge. */
@@ -122,7 +123,7 @@ function TeamSwitcherMenu({
       {teamSegment.icon}
     </span>
   )
-  // The person's character takes the tile's place inside the switcher; it only displays.
+  // The workspace icon gets the person's chosen stat around it; it only displays.
   const character = user && onUserUpdated && !teamSegment.loading ? { user, onUserUpdated } : null
 
   return (
@@ -136,9 +137,9 @@ function TeamSwitcherMenu({
           {teamSegment.loading ? (
             <Loader2 className="w-3.5 h-3.5 flex-shrink-0 animate-spin text-zViolet-accent" />
           ) : character ? (
-            <SidebarCharacter
+            <WorkspaceBadge
               user={character.user}
-              fallback={tile}
+              icon={tile}
               teamId={badgeData?.teamId}
               sessions={badgeData?.sessions}
               onUserUpdated={character.onUserUpdated}
@@ -199,10 +200,22 @@ function TeamSwitcherMenu({
   )
 }
 
-/** The person's own picture: their profile character once picked, else their photo or initials. */
-function UserPicture({ user, name, size }: { user: UserInfo; name: string; size: number }) {
-  // A pick still waiting on this computer shows here too, as it does in the profile ring.
-  const character = shownCharacter(user, usePendingPick(user.id))
+/**
+ * The person's own picture: their profile character once picked, else their photo or
+ * initials. The character is still until hovered, then plays its idle loop once.
+ */
+function UserPicture({
+  user,
+  name,
+  size,
+  character,
+}: {
+  user: UserInfo
+  name: string
+  size: number
+  character: ProfileCharacter | undefined
+}) {
+  const [plays, setPlays] = useState(0)
 
   if (!character)
     return (
@@ -218,8 +231,9 @@ function UserPicture({ user, name, size }: { user: UserInfo; name: string; size:
     <span
       className="flex-shrink-0 overflow-hidden rounded-full bg-zViolet-accent/10"
       style={{ width: size, height: size }}
+      onPointerEnter={() => setPlays((count) => count + 1)}
     >
-      <ProfileCharacterImage character={character} className="h-full w-full" />
+      <ProfileCharacterImage character={character} plays={plays} className="h-full w-full" />
     </span>
   )
 }
@@ -234,16 +248,18 @@ export function SidebarUserEntry({
   onLogout: () => void
 }) {
   const name = user.name || user.username || user.email
+  // A pick still waiting on this computer shows here too; the workspace row sends it up.
+  const character = shownCharacter(user, usePendingPick(user.id))
 
   return (
     <Menu>
       <MenuTrigger className="titlebar-no-drag min-w-0 flex-1 h-9 flex items-center gap-2.5 px-2 rounded-lg text-[13.5px] text-main outline-none transition-colors hover:bg-[var(--sidebar-overlay-hover)] focus-visible:bg-[var(--sidebar-overlay-focus)] data-[popup-open]:bg-[var(--sidebar-overlay-active)]">
-        <UserPicture user={user} name={name} size={22} />
+        <UserPicture user={user} name={name} size={22} character={character} />
         <span className="truncate font-medium">{name}</span>
       </MenuTrigger>
       <MenuContent side="top" align="start" sideOffset={8} className="w-[260px] !rounded-xl !p-1.5">
         <div className="flex items-center gap-2.5 px-2 pb-2.5 pt-1.5">
-          <UserPicture user={user} name={name} size={28} />
+          <UserPicture user={user} name={name} size={28} character={character} />
           <div className="min-w-0">
             <div className="truncate text-[13.5px] font-medium text-main">{name}</div>
             {user.email && <div className="truncate text-[12px] text-tertiary">{user.email}</div>}

@@ -10,7 +10,7 @@ import { toast } from '../../components/ui/toast'
 
 import { AllowedEmailDomainCard } from './AllowedEmailDomainCard'
 import { DangerZone } from './DangerZone'
-import { YourCharacterSection } from './YourCharacterSection'
+import { SidebarBadgeSection } from './SidebarBadgeSection'
 import { Field, SectionHeader } from './shared'
 import { inputClasses } from './styles'
 
@@ -144,7 +144,7 @@ export function GeneralSection({
             </div>
           </form>
 
-          <YourCharacterSection user={user} teamId={team.id} onUserUpdated={onUserUpdated} />
+          <SidebarBadgeSection user={user} team={team} onUserUpdated={onUserUpdated} />
 
           <AllowedEmailDomainCard
             team={team}

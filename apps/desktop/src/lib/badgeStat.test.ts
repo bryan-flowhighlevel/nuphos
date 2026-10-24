@@ -151,7 +151,9 @@ test('none: just the character', () => {
 
 test('no XP or level code is left in the character and its badge', () => {
   const files = [
-    '../components/sidebar/SidebarCharacter.tsx',
+    '../components/sidebar/WorkspaceBadge.tsx',
+    '../views/settings/SidebarBadgeSection.tsx',
+    '../views/settings/ProfileCharacterSection.tsx',
     '../components/sidebar/CharacterRing.tsx',
     '../components/sidebar/CharacterRing.css',
     '../hooks/useProfileCharacter.ts',
