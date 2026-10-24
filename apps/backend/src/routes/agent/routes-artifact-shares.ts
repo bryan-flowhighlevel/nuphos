@@ -3,6 +3,7 @@ import {
   ARTIFACT_TOOL,
   artifactShareInput,
   artifactVersionFromMessages,
+  canShareKind,
   artifactShareView,
   findArtifactShare,
   publishArtifactShare,
@@ -54,7 +55,11 @@ artifactShareRoutes.get('/conversations/:sessionId/artifacts/:artifactId/share',
   const { sessionId, artifactId } = await readableArtifact(c)
   const share = await findArtifactShare(sessionId, artifactId)
 
-  return c.json({ share: share ? artifactShareView(share) : null })
+  return c.json({
+    share: share ? artifactShareView(share) : null,
+    // Lets the desktop explain, before anyone tries, why a page can't be shared.
+    htmlSharing: canShareKind('html'),
+  })
 })
 
 artifactShareRoutes.put('/conversations/:sessionId/artifacts/:artifactId/share', async (c) => {
@@ -74,6 +79,13 @@ artifactShareRoutes.put('/conversations/:sessionId/artifacts/:artifactId/share',
 
   if (!version) {
     throw new AppError(404, 'not_found', 'That artifact version is not in the saved conversation')
+  }
+  if (!canShareKind(version.kind)) {
+    throw new AppError(
+      409,
+      'html_share_unavailable',
+      'Pages can be shared once this server has a separate artifact origin (ARTIFACT_PUBLIC_ORIGIN)',
+    )
   }
   const share = await publishArtifactShare({
     teamId,

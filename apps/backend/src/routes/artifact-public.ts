@@ -10,7 +10,11 @@ import {
   artifactSharePage,
   artifactSourceHeaders,
 } from '@/lib/agent/artifact-share-page'
-import { findPublicArtifactShare } from '@/lib/agent/artifact-shares'
+import {
+  canShareKind,
+  findPublicArtifactShare,
+  servesArtifactHost,
+} from '@/lib/agent/artifact-shares'
 
 /*
  * Public pages behind an artifact share link: no auth, by design. A link is
@@ -27,8 +31,22 @@ function notFound() {
   })
 }
 
+// With an artifact origin set, these pages exist only on its host: on the API
+// or product host a link is just not found.
+artifactPublicRoutes.use('*', async (c, next) => {
+  if (!servesArtifactHost(c.req.url)) return notFound()
+  await next()
+})
+
+/** A share this host may show as a page: a page only with an artifact origin. */
+async function viewableShare(shareId: string) {
+  const share = await findPublicArtifactShare(shareId)
+
+  return share && canShareKind(share.kind) ? share : null
+}
+
 artifactPublicRoutes.get('/:shareId', async (c) => {
-  const share = await findPublicArtifactShare(c.req.param('shareId'))
+  const share = await viewableShare(c.req.param('shareId'))
 
   if (!share) return notFound()
   const nonce = randomBytes(16).toString('base64')
@@ -47,7 +65,7 @@ artifactPublicRoutes.get('/:shareId/raw', async (c) => {
       'X-Content-Type-Options': 'nosniff',
     })
   }
-  const share = await findPublicArtifactShare(c.req.param('shareId'))
+  const share = await viewableShare(c.req.param('shareId'))
 
   if (!share) return notFound()
 

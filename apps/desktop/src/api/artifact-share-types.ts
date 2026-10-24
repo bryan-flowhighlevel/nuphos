@@ -8,13 +8,11 @@ export type ArtifactShare = {
   publishedByName: string
 }
 
-export type ArtifactShareResponse = { share: ArtifactShare | null }
-
-/** The version being published: the backend serves exactly this. */
-export type ArtifactShareInput = {
-  version: number
-  title: string
-  kind: 'html' | 'markdown' | 'svg' | 'code'
-  language?: string
-  content: string
+export type ArtifactShareResponse = {
+  share: ArtifactShare | null
+  /** False until the server has a separate artifact origin; absent from older servers. */
+  htmlSharing?: boolean
 }
+
+/** Which version to publish: the backend reads the artifact from the saved conversation. */
+export type ArtifactShareInput = { version: number }

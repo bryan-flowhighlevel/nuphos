@@ -8,6 +8,7 @@ const keys = [
   'NUPHOS_DEV_EMAIL_OTP_LOG',
   'NUPHOS_LOCAL_STACK',
   'NUPHOS_EMAIL_PROVIDER',
+  'ARTIFACT_PUBLIC_ORIGIN',
 ] as const
 const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]))
 
@@ -65,5 +66,31 @@ describe('email provider', () => {
     process.env.NUPHOS_EMAIL_PROVIDER = 'smtp'
 
     expect(() => coreConfig()).toThrow('NUPHOS_EMAIL_PROVIDER must be one of zsend/resend')
+  })
+})
+
+describe('artifact public origin', () => {
+  test('is unset by default, which keeps HTML shares off', () => {
+    delete process.env.ARTIFACT_PUBLIC_ORIGIN
+
+    expect(coreConfig().auth.artifactPublicOrigin).toBeUndefined()
+  })
+
+  test('is normalised to an origin', () => {
+    process.env.ARTIFACT_PUBLIC_ORIGIN = 'https://Share.Example.test/'
+
+    expect(coreConfig().auth.artifactPublicOrigin).toBe('https://share.example.test')
+  })
+
+  test('rejects anything but an http(s) origin at startup', () => {
+    for (const bad of [
+      'share.example.test',
+      'https://share.example.test/sub',
+      'ftp://share.example.test',
+    ]) {
+      process.env.ARTIFACT_PUBLIC_ORIGIN = bad
+
+      expect(() => coreConfig()).toThrow('ARTIFACT_PUBLIC_ORIGIN must be an origin')
+    }
   })
 })

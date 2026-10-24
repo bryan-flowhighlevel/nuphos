@@ -82,11 +82,20 @@ export function ArtifactShareButton({
 }
 
 function ShareBody({ current, state }: { current: ArtifactVersion; state: ArtifactShareState }) {
-  const { share, loaded, pending, publish, unpublish } = state
+  const { share, loaded, pending, htmlSharing, publish, unpublish } = state
   const stale = share !== null && share.version !== current.version
 
   if (!loaded) {
     return <div className="h-[60px] animate-pulse rounded-lg bg-zGray-850/60" aria-hidden />
+  }
+  if (!share && current.kind === 'html' && !htmlSharing) {
+    return (
+      <p className="m-0 rounded-lg bg-zGray-850/60 px-3 py-2.5 text-[12px] leading-5 text-secondary">
+        Pages can&apos;t be published yet. They run their own code, so Nuphos shares them from a
+        separate web address, and this server doesn&apos;t have one yet. Documents, code and
+        diagrams can be published now, and you can still download this page.
+      </p>
+    )
   }
   if (!share) {
     return (

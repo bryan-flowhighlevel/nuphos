@@ -126,8 +126,31 @@ export function newShareId(): string {
   return [...bytes].map((byte) => BASE62[byte % 62]).join('')
 }
 
+/** The origin share links point at: the artifact origin once there is one. */
+export function artifactShareOrigin(): string {
+  return config.auth.artifactPublicOrigin ?? config.auth.publicBaseUrl
+}
+
+/**
+ * Whether a request may be served artifact pages: on the artifact origin's
+ * host when one is set, anywhere otherwise.
+ */
+export function servesArtifactHost(requestUrl: string): boolean {
+  const origin = config.auth.artifactPublicOrigin
+
+  return !origin || new URL(requestUrl).host === new URL(origin).host
+}
+
+/**
+ * Pages run their own scripts, so they are shared only from a separate
+ * artifact origin. Without one, documents, code and SVG still are.
+ */
+export function canShareKind(kind: ArtifactKind): boolean {
+  return kind !== 'html' || Boolean(config.auth.artifactPublicOrigin)
+}
+
 export function artifactShareUrl(shareId: string): string {
-  return `${config.auth.publicBaseUrl}/artifact/${shareId}`
+  return `${artifactShareOrigin()}/artifact/${shareId}`
 }
 
 export function artifactShareView(share: ArtifactShare): ArtifactShareView {

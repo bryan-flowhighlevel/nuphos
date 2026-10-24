@@ -18,13 +18,19 @@ export function useArtifactShare(
   const key = teamId && sessionId ? `${teamId}:${sessionId}:${artifactId}` : null
   // Tagged with the artifact it was read for, so a tab moving to another
   // artifact reads as loading again rather than showing the last one's link.
-  const [read, setRead] = useState<{ key: string; share: ArtifactShare | null } | null>(null)
+  const [read, setRead] = useState<{
+    key: string
+    share: ArtifactShare | null
+    htmlSharing: boolean
+  } | null>(null)
   const [pending, setPending] = useState<'publish' | 'unpublish' | null>(null)
   const loaded = read !== null && read.key === key
   const share = loaded ? read.share : null
+  // A server that does not say lets pages be shared, as it always did.
+  const htmlSharing = loaded ? read.htmlSharing : true
   const setShare = useCallback(
     (next: ArtifactShare | null) => {
-      if (key) setRead({ key, share: next })
+      if (key) setRead((prev) => ({ key, share: next, htmlSharing: prev?.htmlSharing ?? true }))
     },
     [key],
   )
@@ -32,13 +38,13 @@ export function useArtifactShare(
   useEffect(() => {
     if (!teamId || !sessionId || !key) return
     let cancelled = false
-    const settle = (next: ArtifactShare | null) => {
-      if (!cancelled) setRead({ key, share: next })
+    const settle = (next: ArtifactShare | null, htmlSharing = true) => {
+      if (!cancelled) setRead({ key, share: next, htmlSharing })
     }
 
     api
       .agentGetArtifactShare(sessionId, artifactId, teamId)
-      .then((res) => settle(res.share))
+      .then((res) => settle(res.share, res.htmlSharing ?? true))
       // No link state is the right outcome; Share still offers to publish.
       .catch(() => settle(null))
 
@@ -54,10 +60,6 @@ export function useArtifactShare(
       try {
         const res = await api.agentPublishArtifactShare(sessionId, artifactId, teamId, {
           version: version.version,
-          title: version.title,
-          kind: version.kind,
-          ...(version.language ? { language: version.language } : {}),
-          content: version.content,
         })
 
         setShare(res.share)
@@ -83,7 +85,15 @@ export function useArtifactShare(
     }
   }, [teamId, sessionId, artifactId, setShare])
 
-  return { share, loaded, pending, canShare: Boolean(teamId && sessionId), publish, unpublish }
+  return {
+    share,
+    loaded,
+    pending,
+    htmlSharing,
+    canShare: Boolean(teamId && sessionId),
+    publish,
+    unpublish,
+  }
 }
 
 export type ArtifactShareState = ReturnType<typeof useArtifactShare>

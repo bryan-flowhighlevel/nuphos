@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { Hono } from 'hono'
 import { ObjectId } from 'mongodb'
 
+import { config } from '@/config'
 import { errorHandler } from '@/lib/errors'
 import { useAgentDb } from '@/lib/test/doubles/agent-db'
 import { useDb } from '@/lib/test/doubles/db'
@@ -76,7 +77,16 @@ const framed = (shareId: string) =>
 
 type ShareBody = { share: { shareId: string; url: string; version: number } | null }
 
+const savedOrigin = config.auth.artifactPublicOrigin
+// Requests here go to http://localhost, so this is "an artifact origin is set".
+const LOCAL_ORIGIN = 'http://localhost'
+
+afterEach(() => {
+  config.auth.artifactPublicOrigin = savedOrigin
+})
+
 beforeEach(() => {
+  config.auth.artifactPublicOrigin = LOCAL_ORIGIN
   viewer = MEMBER
   memory = portabilityDb()
   transcript = [
@@ -185,5 +195,78 @@ describe('artifact share links', () => {
   test('an unknown or malformed link is a not-found page, never an error', async () => {
     expect((await app.request('/artifact/nope')).status).toBe(404)
     expect((await app.request('/artifact/AAAAAAAAAAAAAAAAAAAAAA')).status).toBe(404)
+  })
+})
+
+describe('the artifact origin', () => {
+  const SHARE_HOST = 'https://share.example.test'
+  const doc = { content: '# Spend\n\nNotes', kind: 'markdown', title: 'Spend notes' }
+
+  test('with an origin set, /artifact/* answers only on its host and links use it', async () => {
+    config.auth.artifactPublicOrigin = SHARE_HOST
+    const published = (await (await publish({})).json()) as ShareBody
+    const shareId = published.share?.shareId ?? ''
+
+    expect(published.share?.url).toBe(`${SHARE_HOST}/artifact/${shareId}`)
+    expect((await app.request(`${SHARE_HOST}/artifact/${shareId}`)).status).toBe(200)
+    const framed = await app.request(`${SHARE_HOST}/artifact/${shareId}/raw`, {
+      headers: { 'Sec-Fetch-Dest': 'iframe' },
+    })
+
+    expect(framed.status).toBe(200)
+    // The API or product host never serves it, for any of the three pages.
+    for (const path of ['', '/raw', '/source']) {
+      const other = await app.request(`https://api.nuphos.example/artifact/${shareId}${path}`, {
+        headers: { 'Sec-Fetch-Dest': 'iframe' },
+      })
+
+      expect(other.status).toBe(404)
+      expect(await other.text()).not.toContain('<h1>Spend</h1>')
+    }
+  })
+
+  test('without an origin, a page is refused but documents, code and SVG are shared', async () => {
+    config.auth.artifactPublicOrigin = undefined
+    transcript = [
+      { index: 1, parts: [call('page', {})] },
+      { index: 2, parts: [call('doc', doc)] },
+    ]
+    const status = (await (await app.request(SHARE)).json()) as { htmlSharing: boolean }
+
+    expect(status.htmlSharing).toBe(false)
+    const page = await publish({ version: 1 })
+
+    expect(page.status).toBe(409)
+    expect(((await page.json()) as { error?: { code?: string } }).error?.code ?? '').toContain(
+      'html_share_unavailable',
+    )
+    expect(memory.rows('agent_artifact_shares')).toHaveLength(0)
+
+    const published = (await (await publish({ version: 2 })).json()) as ShareBody
+    const shareId = published.share?.shareId ?? ''
+
+    expect(published.share?.url).toBe(`${config.auth.publicBaseUrl}/artifact/${shareId}`)
+    expect((await app.request(`/artifact/${shareId}`)).status).toBe(200)
+  })
+
+  test('a page published while there was an origin stops showing when it is removed', async () => {
+    const shareId = ((await (await publish({})).json()) as ShareBody).share?.shareId ?? ''
+
+    config.auth.artifactPublicOrigin = undefined
+    expect((await app.request(`/artifact/${shareId}`)).status).toBe(404)
+    expect((await framed(shareId)).status).toBe(404)
+    // Its source stays a plain-text download: it never runs.
+    const source = await app.request(`/artifact/${shareId}/source?download=1`)
+
+    expect(source.status).toBe(200)
+    expect(source.headers.get('Content-Type')).toContain('text/plain')
+    expect(source.headers.get('Content-Disposition')).toContain('attachment')
+  })
+
+  test('with an origin set, a page can be published', async () => {
+    const status = (await (await app.request(SHARE)).json()) as { htmlSharing: boolean }
+
+    expect(status.htmlSharing).toBe(true)
+    expect((await publish({})).status).toBe(200)
   })
 })
