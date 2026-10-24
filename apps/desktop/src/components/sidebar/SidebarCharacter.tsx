@@ -20,7 +20,8 @@ function CharacterRing({
   character,
   fallback,
   level,
-  animated,
+  looping = false,
+  plays = 0,
   badge,
 }: {
   size: number
@@ -28,7 +29,9 @@ function CharacterRing({
   character: ProfileCharacter | undefined
   fallback: ReactNode
   level: ProfileLevel | null
-  animated: boolean
+  /** Repeat the idle loop (the picker, while open). Otherwise each new `plays` plays it once. */
+  looping?: boolean
+  plays?: number
   badge: 'small' | 'large'
 }) {
   const gradientId = useId()
@@ -79,7 +82,8 @@ function CharacterRing({
         {character ? (
           <ProfileCharacterImage
             character={character}
-            animated={animated}
+            looping={looping}
+            plays={plays}
             className="character-ring-character h-full w-full"
           />
         ) : (
@@ -142,6 +146,9 @@ export function SidebarCharacter({
   const { chosen, note, pick } = useCharacterPick(user, onUserUpdated)
   const [preview, setPreview] = useState<ProfileCharacter | null>(null)
   const [open, setOpen] = useState(false)
+  // Hover and keyboard focus each play the loop once; reaching a new level adds one more.
+  const [hovers, setHovers] = useState(0)
+  const plays = hovers + (levelledUp ? 1 : 0)
   const character = preview ?? chosen
   const levelPart = level ? `, level ${String(level.level)}` : ''
   const label = chosen ? `Your character${levelPart}. Change character` : 'Pick your character'
@@ -172,6 +179,10 @@ export function SidebarCharacter({
       >
         <Popover.Trigger
           aria-label={label}
+          onPointerEnter={() => setHovers((count) => count + 1)}
+          onFocus={(event) => {
+            if (event.currentTarget.matches(':focus-visible')) setHovers((count) => count + 1)
+          }}
           className={clsx(
             'titlebar-no-drag relative flex-none rounded-full outline-none focus-visible:ring-2 focus-visible:ring-zViolet-accent/60',
             levelledUp && 'character-level-up',
@@ -183,7 +194,7 @@ export function SidebarCharacter({
             character={character}
             fallback={fallback}
             level={level}
-            animated
+            plays={plays}
             badge="small"
           />
           {!chosen && (
@@ -214,7 +225,7 @@ export function SidebarCharacter({
                 character={character}
                 fallback={fallback}
                 level={level}
-                animated
+                looping
                 badge="large"
               />
               <div className="min-w-0">

@@ -1,44 +1,56 @@
 import { useReducedMotion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 
-import { animatedSvgUrl, loadAnimatedSvg, withIdleMotion } from '../lib/botAvatarMotion'
+import { usePlayOnce } from '../hooks/usePlayOnce'
+import { imageMotion, loopingSvgUrl, readyLoopingSvgUrl } from '../lib/botAvatarMotion'
 import { profileCharacterLabel, profileCharacterSrc } from '../lib/profileLevel'
 
 import type { ProfileCharacter } from '../types'
 
-const animate = (svg: string) => withIdleMotion(svg, 0)
-
 /**
- * The person's profile character. `animated` plays the same idle loop as the
- * Agent avatars; each animated image repaints every frame, so use it where it is seen.
+ * The person's profile character, with the Agent avatars' motion rule: still by default,
+ * and each new `plays` count plays the idle loop once (hover, focus, a level-up).
+ * `looping` repeats it, for the picker while the person is choosing. Reduce motion keeps
+ * it still.
  */
 export function ProfileCharacterImage({
   character,
-  animated = false,
+  looping = false,
+  plays = 0,
   className,
 }: {
   character: ProfileCharacter
-  animated?: boolean
+  looping?: boolean
+  plays?: number
   className?: string
 }) {
   const src = profileCharacterSrc(character)
-  const reduceMotion = useReducedMotion()
-  const live = animated && !reduceMotion
+  const motion = imageMotion({ reduceMotion: useReducedMotion() ?? false, looping })
+  const loop = motion === 'loop'
   const [, setLoaded] = useState(0)
-  const moving = live ? animatedSvgUrl(src) : undefined
+  const once = usePlayOnce(src)
+  const { play } = once
 
   useEffect(() => {
-    if (!live || animatedSvgUrl(src)) return
+    if (!loop || readyLoopingSvgUrl(src)) return
     let current = true
 
-    void loadAnimatedSvg(src, animate).then((loaded) => {
-      if (loaded && current) setLoaded((count) => count + 1)
+    void loopingSvgUrl(src).then((url) => {
+      if (url && current) setLoaded((count) => count + 1)
     })
 
     return () => {
       current = false
     }
-  }, [src, live])
+  }, [src, loop])
+
+  useEffect(() => {
+    if (plays > 0 && motion === 'on-request') play()
+    // Only a new play count starts a play; a re-render or new character does not.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plays])
+
+  const moving = loop ? readyLoopingSvgUrl(src) : once.url
 
   return (
     <img

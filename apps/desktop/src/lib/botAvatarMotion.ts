@@ -57,96 +57,165 @@ export function withBotAvatarMotion(svg: string, file: BotAvatarFile, loop = tru
 /** How long one play of the loop lasts. */
 export const BOT_AVATAR_LOOP_MS = PERIOD_S * 1000
 
-const sources = new Map<BotAvatarFile, Promise<string | false>>()
-const looping = new Map<BotAvatarFile, string>()
-
-/** The still SVG text of a character, fetched once. False if it could not load. */
-export function loadBotAvatarSvg(file: BotAvatarFile): Promise<string | false> {
-  const pending =
-    sources.get(file) ??
-    fetch(`/bot-avatars/${file}`)
-      .then((response) => {
-        if (!response.ok) throw new Error(`${file}: HTTP ${String(response.status)}`)
-
-        return response.text()
-      })
-      .catch(() => {
-        // A later hover or run may try again; until then the still file shows.
-        sources.delete(file)
-
-        return false
-      })
-
-  sources.set(file, pending)
-
-  return pending
-}
-
-/** The looping copy if it is already built, so a remounted running avatar never blinks still. */
-export function readyLoopingBotAvatarUrl(file: BotAvatarFile): string | undefined {
-  return looping.get(file)
-}
-
-/** The looping copy of a character, shared by every running agent that wears it. */
-export async function loopingBotAvatarUrl(file: BotAvatarFile): Promise<string | undefined> {
-  const ready = looping.get(file)
-
-  if (ready) return ready
-  const svg = await loadBotAvatarSvg(file)
-
-  if (svg === false) return undefined
-  const url = looping.get(file) ?? svgUrl(withBotAvatarMotion(svg, file))
-
-  looping.set(file, url)
-
-  return url
-}
-
 /**
- * A fresh copy that plays the loop once from the start. Each image URL keeps one
- * animation clock, so a replay needs a new URL; revoke it once the play ends.
+ * What a character image does. Reduce motion keeps it still; `looping` repeats the
+ * idle loop; otherwise it is still until asked to play the loop once (hover, level-up).
  */
-export async function playOnceBotAvatarUrl(file: BotAvatarFile): Promise<string | undefined> {
-  const svg = await loadBotAvatarSvg(file)
+export function imageMotion({
+  reduceMotion,
+  looping,
+}: {
+  reduceMotion: boolean
+  looping: boolean
+}): 'still' | 'loop' | 'on-request' {
+  if (reduceMotion) return 'still'
 
-  return svg === false ? undefined : svgUrl(withBotAvatarMotion(svg, file, false))
+  return looping ? 'loop' : 'on-request'
 }
 
-function svgUrl(svg: string): string {
-  return URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }))
-}
+const botAvatarSrc = (file: BotAvatarFile) => `/bot-avatars/${file}`
+const sources = new Map<string, Promise<string | false>>()
+const looping = new Map<string, string>()
 
-const ready = new Map<string, string>()
-const loading = new Map<string, Promise<boolean>>()
-
-/** The animated copy of the SVG at `src` once it has loaded; undefined until then. */
-export function animatedSvgUrl(src: string): string | undefined {
-  return ready.get(src)
-}
-
-/** Builds the animated copy of `src` once, kept for the life of the window. False if it could not load. */
-export function loadAnimatedSvg(src: string, animate: (svg: string) => string): Promise<boolean> {
+/** The still SVG text at `src`, fetched once. False if it could not load. */
+export function loadSvgText(src: string): Promise<string | false> {
   const pending =
-    loading.get(src) ??
+    sources.get(src) ??
     fetch(src)
       .then((response) => {
         if (!response.ok) throw new Error(`${src}: HTTP ${String(response.status)}`)
 
         return response.text()
       })
-      .then((svg) => {
-        ready.set(src, svgUrl(animate(svg)))
-
-        return true
-      })
       .catch(() => {
-        // A later mount may try again; until then the still file shows.
-        loading.delete(src)
+        // A later hover or run may try again; until then the still file shows.
+        sources.delete(src)
 
         return false
       })
 
-  loading.set(src, pending)
+  sources.set(src, pending)
 
   return pending
+}
+
+/** The still SVG text of a character, fetched once. False if it could not load. */
+export function loadBotAvatarSvg(file: BotAvatarFile): Promise<string | false> {
+  return loadSvgText(botAvatarSrc(file))
+}
+
+/** The looping copy of `src` if it is already built, so a remount never blinks still. */
+export function readyLoopingSvgUrl(src: string): string | undefined {
+  return looping.get(src)
+}
+
+/** The looping copy of `src`, built once and shared by every image that shows it. */
+export async function loopingSvgUrl(
+  src: string,
+  animate: (svg: string) => string = (svg) => withIdleMotion(svg, 0),
+): Promise<string | undefined> {
+  const ready = looping.get(src)
+
+  if (ready) return ready
+  const svg = await loadSvgText(src)
+
+  if (svg === false) return undefined
+  const url = looping.get(src) ?? svgUrl(animate(svg))
+
+  looping.set(src, url)
+
+  return url
+}
+
+/** The looping copy if it is already built, so a remounted running avatar never blinks still. */
+export function readyLoopingBotAvatarUrl(file: BotAvatarFile): string | undefined {
+  return readyLoopingSvgUrl(botAvatarSrc(file))
+}
+
+/** The looping copy of a character, shared by every running agent that wears it. */
+export function loopingBotAvatarUrl(file: BotAvatarFile): Promise<string | undefined> {
+  return loopingSvgUrl(botAvatarSrc(file), (svg) => withBotAvatarMotion(svg, file))
+}
+
+/**
+ * A fresh copy of `src` that plays the loop once from the start. Each image URL keeps one
+ * animation clock, so a replay needs a new URL; revoke it once the play ends.
+ */
+export async function playOnceSvgUrl(src: string): Promise<string | undefined> {
+  const svg = await loadSvgText(src)
+
+  return svg === false ? undefined : svgUrl(withIdleMotion(svg, 0, '1'))
+}
+
+/** A fresh copy of a character that plays the loop once from the start. */
+export function playOnceBotAvatarUrl(file: BotAvatarFile): Promise<string | undefined> {
+  return playOnceSvgUrl(botAvatarSrc(file))
+}
+
+function svgUrl(svg: string): string {
+  return URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }))
+}
+
+export type PlayOnce = { play: () => void; dispose: () => void }
+
+/**
+ * Plays the loop once per `play()`: `build` makes a fresh URL, `onChange` gets it, and
+ * after one loop gets undefined again and the URL is revoked. A play while one is
+ * running is ignored, so pointer jitter never restarts it.
+ */
+export function createPlayOnce(
+  build: () => Promise<string | undefined>,
+  onChange: (url: string | undefined) => void,
+  {
+    durationMs = BOT_AVATAR_LOOP_MS,
+    revoke = (url: string) => URL.revokeObjectURL(url),
+    schedule = (done: () => void, ms: number) => {
+      const timer = setTimeout(done, ms)
+
+      return () => clearTimeout(timer)
+    },
+  } = {},
+): PlayOnce {
+  let busy = false
+  let disposed = false
+  let shown: string | undefined
+  let cancel: (() => void) | undefined
+
+  const finish = (url: string) => {
+    revoke(url)
+    shown = undefined
+    busy = false
+    cancel = undefined
+    if (!disposed) onChange(undefined)
+  }
+
+  const start = (url: string | undefined) => {
+    if (!url) {
+      busy = false
+
+      return
+    }
+    if (disposed) {
+      revoke(url)
+
+      return
+    }
+    shown = url
+    onChange(url)
+    cancel = schedule(() => finish(url), durationMs)
+  }
+
+  return {
+    play() {
+      if (busy || disposed) return
+      busy = true
+      void build().then(start)
+    },
+    dispose() {
+      disposed = true
+      cancel?.()
+      if (shown) revoke(shown)
+      shown = undefined
+    },
+  }
 }
