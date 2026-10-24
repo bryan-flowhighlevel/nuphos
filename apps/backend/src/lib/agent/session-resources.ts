@@ -43,6 +43,8 @@ export const sessionResourceInput = z.discriminatedUnion('provider', [
 export type SessionResource = {
   id: string
   key: string
+  /** When a linked PR merged, from GitHub; absent for PRs merged before it was recorded. */
+  mergedAt?: string
   provider: 'github' | 'linear'
   integrationId: string
   resourceId: string
@@ -53,8 +55,6 @@ export type SessionResource = {
   stateType?: string
   repository?: string
   number?: number
-  /** When a linked PR merged, from GitHub; absent for PRs merged before it was recorded. */
-  mergedAt?: string
   linkedAt: string
 }
 export type ResourceActor = { userId: string; teamId: string; sessionId: string }
@@ -149,10 +149,10 @@ async function resolveResource(
       throw new AppError(502, 'resource_lookup_failed', `GitHub returned ${response.status}`)
     const pr = (await response.json()) as {
       number: number
+      merged_at: string | null
       title: string
       state: string
       merged: boolean
-      merged_at: string | null
       base: { repo: { id: number; full_name: string } }
     }
 
@@ -166,9 +166,9 @@ async function resolveResource(
       resourceId: `${pr.base.repo.id}/${pr.number}`,
       repository,
       number: pr.number,
+      ...(pr.merged && pr.merged_at ? { mergedAt: pr.merged_at } : {}),
       title: pr.title.slice(0, 300),
       state: pr.merged ? 'merged' : pr.state,
-      ...(pr.merged && pr.merged_at ? { mergedAt: pr.merged_at } : {}),
       url: `https://github.com/${repository}/pull/${pr.number}`,
     }
   }
@@ -281,11 +281,11 @@ export async function refreshSessionResource(
     { sessionId: conversation.sessionId, 'linkedResources.id': resource.id },
     {
       $set: {
+        ...(fresh.mergedAt ? { 'linkedResources.$.mergedAt': fresh.mergedAt } : {}),
         'linkedResources.$.title': fresh.title,
         'linkedResources.$.state': fresh.state,
         'linkedResources.$.url': fresh.url,
         ...(fresh.stateType ? { 'linkedResources.$.stateType': fresh.stateType } : {}),
-        ...(fresh.mergedAt ? { 'linkedResources.$.mergedAt': fresh.mergedAt } : {}),
       },
     },
   )

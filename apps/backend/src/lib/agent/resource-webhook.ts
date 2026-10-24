@@ -208,6 +208,21 @@ export function githubPullState(event: string, payload: unknown) {
   }
 }
 
+/**
+ * Keeps when a linked PR merged, so the sidebar can count PRs merged this month. It
+ * reads the same closed event as `githubPullState`, from GitHub's payload, with no lookup.
+ */
+export async function recordPullMerge(event: string, payload: unknown) {
+  const merge = githubPullState(event, payload)
+
+  if (!merge?.mergedAt) return
+  await agentConversations().updateMany(
+    { 'linkedResources.key': merge.key },
+    { $set: { 'linkedResources.$[resource].mergedAt': merge.mergedAt } },
+    { arrayFilters: [{ 'resource.key': merge.key }] },
+  )
+}
+
 export type ResourceTurn = {
   sessionId: string
   resourceId: string
@@ -221,14 +236,7 @@ export async function routeResourceWebhook(event: string, payload: unknown, deli
   if (pullState) {
     await agentConversations().updateMany(
       { 'linkedResources.key': pullState.key },
-      {
-        $set: {
-          'linkedResources.$[resource].state': pullState.state,
-          ...(pullState.mergedAt
-            ? { 'linkedResources.$[resource].mergedAt': pullState.mergedAt }
-            : {}),
-        },
-      },
+      { $set: { 'linkedResources.$[resource].state': pullState.state } },
       { arrayFilters: [{ 'resource.key': pullState.key }] },
     )
   }
