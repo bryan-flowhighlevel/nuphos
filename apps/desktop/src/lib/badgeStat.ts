@@ -48,8 +48,6 @@ export type BadgeReading = {
   fraction: number | null
   /** One line that says what the number means. */
   summary: string
-  /** A session the badge opens, for counts of sessions. */
-  sessionId?: string
 }
 
 const plural = (count: number, one: string, many = `${one}s`) =>
@@ -59,7 +57,7 @@ function state(inputs: BadgeInputs, session: AgentConversation) {
   return inputs.runtimeStates.get(session.sessionId) ?? session.runtimeState
 }
 
-/** The person's own live sessions, most recently active first. */
+/** The person's own live sessions, most recently active first (the quota reads the latest). */
 function ownSessions(inputs: BadgeInputs): AgentConversation[] {
   return inputs.sessions
     .filter((session) => session.isOwner === true && !session.archivedAt)
@@ -109,7 +107,6 @@ export function readBadge(stat: BadgeStat, inputs: BadgeInputs): BadgeReading {
         badge: String(running.length),
         fraction: null,
         summary: `${plural(running.length, 'session')} running now`,
-        sessionId: running[0]?.sessionId,
       }
     }
     case 'waiting': {
@@ -126,7 +123,6 @@ export function readBadge(stat: BadgeStat, inputs: BadgeInputs): BadgeReading {
         summary: waiting.length
           ? `${plural(waiting.length, 'session')} waiting on you`
           : 'Nothing is waiting on you',
-        sessionId: waiting[0]?.sessionId,
       }
     }
     case 'quota': {

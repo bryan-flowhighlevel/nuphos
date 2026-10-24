@@ -46,7 +46,7 @@ test('PRs merged this month: a plain count on a quiet ring, scoped to linked PRs
   assert.equal(readBadge('merged-prs', inputs()).badge, undefined)
 })
 
-test('running: own live sessions with a turn running, newest first, opening the first', () => {
+test('running: own live sessions with a turn running', () => {
   const sessions = [
     session('old', { lastActiveAt: '2026-10-20T00:00:00Z' }),
     session('new', { lastActiveAt: '2026-10-23T00:00:00Z' }),
@@ -67,7 +67,6 @@ test('running: own live sessions with a turn running, newest first, opening the 
   assert.equal(reading.badge, '3')
   assert.equal(reading.fraction, null)
   assert.equal(reading.summary, '3 sessions running now')
-  assert.equal(reading.sessionId, 'new')
   assert.equal(readBadge('running', inputs()).badge, '0')
 })
 
@@ -93,7 +92,6 @@ test('waiting: questions and approvals, as a share of active sessions, hidden at
   assert.equal(reading.badge, '2')
   assert.equal(reading.fraction, 2 / 3)
   assert.equal(reading.summary, '2 sessions waiting on you')
-  assert.ok(['asked', 'approval'].includes(reading.sessionId ?? ''))
   const none = readBadge('waiting', inputs({ sessions: [session('quiet')] }))
 
   assert.equal(none.badge, undefined)

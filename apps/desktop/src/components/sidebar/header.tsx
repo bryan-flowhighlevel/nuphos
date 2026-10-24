@@ -89,12 +89,8 @@ type TeamSwitcherActions = {
   /** The signed-in person: their character takes the workspace tile's place. */
   user?: UserInfo | null
   onUserUpdated?: (user: UserInfo) => void
-  /** This workspace, its sessions and the sidebar's row opener, for the character's badge. */
-  badgeData?: {
-    teamId: string
-    sessions: readonly AgentConversation[]
-    onSelect: (key: string) => void
-  }
+  /** This workspace and its sessions, for the stat on the character's badge. */
+  badgeData?: { teamId: string; sessions: readonly AgentConversation[] }
 }
 
 /** The team switcher, revealed from its skeleton once the team segment loads. */
@@ -126,25 +122,11 @@ function TeamSwitcherMenu({
       {teamSegment.icon}
     </span>
   )
-  // The person's character sits beside the switcher, not inside it, so each opens on its own.
-  const character = user && onUserUpdated && !teamSegment.loading
+  // The person's character takes the tile's place inside the switcher; it only displays.
+  const character = user && onUserUpdated && !teamSegment.loading ? { user, onUserUpdated } : null
 
   return (
     <div className="px-2.5 pb-1.5 titlebar-no-drag flex items-center gap-1">
-      {character && (
-        <span className="flex h-9 flex-none items-center pl-1.5">
-          <SidebarCharacter
-            user={user}
-            fallback={tile}
-            teamId={badgeData?.teamId}
-            sessions={badgeData?.sessions}
-            onOpenSession={
-              badgeData && ((sessionId) => badgeData.onSelect(`agent-session:${sessionId}`))
-            }
-            onUserUpdated={onUserUpdated}
-          />
-        </span>
-      )}
       <Menu
         onOpenChange={(open) => {
           if (open) teamSegment.onExpand?.()
@@ -153,8 +135,16 @@ function TeamSwitcherMenu({
         <MenuTrigger className="min-w-0 flex-1 h-9 flex items-center gap-2.5 px-2 rounded-md text-[13.5px] transition-colors outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:bg-[var(--sidebar-overlay-focus)] hover:bg-[var(--sidebar-overlay-hover)] text-main data-[popup-open]:bg-[var(--sidebar-overlay-active)]">
           {teamSegment.loading ? (
             <Loader2 className="w-3.5 h-3.5 flex-shrink-0 animate-spin text-zViolet-accent" />
+          ) : character ? (
+            <SidebarCharacter
+              user={character.user}
+              fallback={tile}
+              teamId={badgeData?.teamId}
+              sessions={badgeData?.sessions}
+              onUserUpdated={character.onUserUpdated}
+            />
           ) : (
-            !character && tile
+            tile
           )}
           <span className="truncate flex-1 text-left font-medium">{teamSegment.label}</span>
           {!teamSegment.loading && (
