@@ -89,10 +89,12 @@ type TeamSwitcherActions = {
   /** The signed-in person: their character takes the workspace tile's place. */
   user?: UserInfo | null
   onUserUpdated?: (user: UserInfo) => void
-  /** This workspace and its sessions, for the stat on the character's badge. */
-  teamId?: string
-  sessions?: readonly AgentConversation[]
-  onOpenSession?: (sessionId: string) => void
+  /** This workspace, its sessions and the sidebar's row opener, for the character's badge. */
+  badgeData?: {
+    teamId: string
+    sessions: readonly AgentConversation[]
+    onSelect: (key: string) => void
+  }
 }
 
 /** The team switcher, revealed from its skeleton once the team segment loads. */
@@ -117,9 +119,7 @@ function TeamSwitcherMenu({
   onCreateTeam,
   user,
   onUserUpdated,
-  teamId,
-  sessions,
-  onOpenSession,
+  badgeData,
 }: TeamSwitcherActions & { teamSegment: BreadcrumbSegment }) {
   const tile = (
     <span className="flex items-center flex-shrink-0 [&>*]:!h-5 [&>*]:!w-5 [&>svg]:!h-5 [&>svg]:!w-5">
@@ -136,9 +136,11 @@ function TeamSwitcherMenu({
           <SidebarCharacter
             user={user}
             fallback={tile}
-            teamId={teamId}
-            sessions={sessions}
-            onOpenSession={onOpenSession}
+            teamId={badgeData?.teamId}
+            sessions={badgeData?.sessions}
+            onOpenSession={
+              badgeData && ((sessionId) => badgeData.onSelect(`agent-session:${sessionId}`))
+            }
             onUserUpdated={onUserUpdated}
           />
         </span>

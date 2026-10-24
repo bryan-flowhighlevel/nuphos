@@ -208,9 +208,7 @@ export const Sidebar = memo(function Sidebar({
           loading={teamSkeleton}
           user={user}
           onUserUpdated={onUserUpdated}
-          teamId={teamId}
-          sessions={agentSessions}
-          onOpenSession={(sessionId) => onSelect(`agent-session:${sessionId}`)}
+          badgeData={{ teamId, sessions: agentSessions, onSelect }}
           onOpenSettings={onOpenSettings}
           onOpenMyPreferences={onOpenMyPreferences}
           onCreateTeam={onCreateTeam}
