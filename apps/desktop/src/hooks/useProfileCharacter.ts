@@ -1,49 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { api } from '../api'
-import { pendingPick, pendingPickKey, savePick, shownCharacter } from '../lib/profileCharacterSync'
-import { profileCharacterLabel, reachedNewLevel, seenLevelKey } from '../lib/profileLevel'
+import { pendingPick, pendingPickKey, savePick, shownCharacter } from '../lib/profilePickSync'
+import { profileCharacterLabel } from '../lib/profileCharacter'
 
 import { notifyPendingPick, usePendingPick } from './usePendingPick'
 
-import type { ProfileCharacter, ProfileLevel, UserInfo } from '../types'
-
-/** The level, or `unavailable` when the server cannot give one; the character works either way. */
-export function useProfileLevel(userId: string) {
-  const [level, setLevel] = useState<ProfileLevel | 'loading' | 'unavailable'>('loading')
-  const [levelledUp, setLevelledUp] = useState(false)
-
-  useEffect(() => {
-    let current = true
-
-    api
-      .authReadLevel(Intl.DateTimeFormat().resolvedOptions().timeZone)
-      .then((next) => {
-        if (!current) return
-        // A server without the level route yet: the level parts stay hidden.
-        if (!next) {
-          setLevel('unavailable')
-
-          return
-        }
-        const key = seenLevelKey(userId)
-
-        setLevelledUp(reachedNewLevel(localStorage.getItem(key), next.level))
-        localStorage.setItem(key, String(next.level))
-        setLevel(next)
-      })
-      .catch(() => {
-        // Offline or a server error: say so quietly rather than counting forever.
-        if (current) setLevel('unavailable')
-      })
-
-    return () => {
-      current = false
-    }
-  }, [userId])
-
-  return { level: typeof level === 'object' ? level : null, status: level, levelledUp }
-}
+import type { ProfileCharacter, UserInfo } from '../types'
 
 export type PickNote =
   { kind: 'saved' | 'kept-here'; text: string } | { kind: 'failed'; character: ProfileCharacter }

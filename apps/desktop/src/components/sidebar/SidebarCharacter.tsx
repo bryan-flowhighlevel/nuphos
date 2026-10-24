@@ -1,157 +1,54 @@
 import { Popover } from '@base-ui/react/popover'
 import clsx from 'clsx'
-import { useId, useState } from 'react'
+import { useState } from 'react'
 
-import { useCharacterPick, useProfileLevel } from '../../hooks/useProfileCharacter'
-import { daysToNextLevel, hairstyleLabel, levelProgress, levelTitle } from '../../lib/profileLevel'
-import { ProfileCharacterImage } from '../ProfileCharacterImage'
+import { useBadgeReading, useBadgeStat } from '../../hooks/useBadgeStat'
+import { useCharacterPick } from '../../hooks/useProfileCharacter'
+import { hairstyleLabel } from '../../lib/profileCharacter'
 import { ProfileCharacterPicker } from '../ProfileCharacterPicker'
 import { Tooltip } from '../ui/tooltip'
 
-import './CharacterRing.css'
+import { BadgeStatPicker } from './BadgeStatPicker'
+import { CharacterRing } from './CharacterRing'
 
-import type { ProfileCharacter, ProfileLevel, UserInfo } from '../../types'
+import type { AgentConversation } from '../../api'
+import type { ProfileCharacter, UserInfo } from '../../types'
 import type { ReactNode } from 'react'
 
-/** The character inside a ring that fills with XP. Before a pick, `fallback` sits in the ring. */
-function CharacterRing({
-  size,
-  stroke,
-  character,
-  fallback,
-  level,
-  looping = false,
-  plays = 0,
-  badge,
-}: {
-  size: number
-  stroke: number
-  character: ProfileCharacter | undefined
-  fallback: ReactNode
-  level: ProfileLevel | null
-  /** Repeat the idle loop (the picker, while open). Otherwise each new `plays` plays it once. */
-  looping?: boolean
-  plays?: number
-  badge: 'small' | 'large'
-}) {
-  const gradientId = useId()
-  const radius = size / 2 - stroke / 2
-  const length = 2 * Math.PI * radius
-  const progress = level ? levelProgress(level) : 0
-  const inset = stroke + Math.round(size * 0.06)
-
-  return (
-    <span className="relative block flex-none" style={{ width: size, height: size }}>
-      <svg
-        viewBox={`0 0 ${String(size)} ${String(size)}`}
-        className="absolute inset-0 -rotate-90"
-        aria-hidden
-      >
-        <defs>
-          <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="rgb(var(--color-zViolet-500))" />
-            <stop offset="1" stopColor="rgb(var(--color-zViolet-accent))" />
-          </linearGradient>
-        </defs>
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          strokeWidth={stroke}
-          className="stroke-zGray-800"
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          stroke={`url(#${gradientId})`}
-          strokeDasharray={length}
-          strokeDashoffset={length * (1 - progress)}
-          className="character-ring-fill"
-          opacity={progress > 0 ? 1 : 0}
-        />
-      </svg>
-      <span
-        className="absolute flex items-center justify-center overflow-hidden rounded-full"
-        style={{ inset }}
-      >
-        {character ? (
-          <ProfileCharacterImage
-            character={character}
-            looping={looping}
-            plays={plays}
-            className="character-ring-character h-full w-full"
-          />
-        ) : (
-          fallback
-        )}
-      </span>
-      {level && (
-        <span
-          className={clsx(
-            'character-ring-badge absolute flex items-center justify-center rounded-full bg-zViolet-500 font-bold tabular-nums leading-none text-white',
-            badge === 'small'
-              ? '-bottom-0.5 -right-1 h-3.5 min-w-3.5 px-[3px] text-[9px]'
-              : 'bottom-[-5px] left-1/2 h-5 min-w-6 -translate-x-1/2 px-1.5 text-[11px]',
-          )}
-        >
-          {level.level}
-        </span>
-      )}
-    </span>
-  )
-}
-
-function LevelLine({ level, status }: { level: ProfileLevel | null; status: unknown }) {
-  if (!level)
-    return (
-      <span className="text-tertiary">
-        {status === 'loading' ? 'Counting your days…' : 'Level unavailable'}
-      </span>
-    )
-  const daysLeft = daysToNextLevel(level)
-
-  return (
-    <>
-      <span className="font-semibold text-main">
-        {level.levelXp.toLocaleString()} / {level.levelSize.toLocaleString()} XP
-      </span>
-      <span>
-        {daysLeft} more {daysLeft === 1 ? 'day' : 'days'} to Level {level.level + 1}
-      </span>
-    </>
-  )
-}
-
 /**
- * The person's character at the top of the sidebar, inside a thin ring that fills with XP
- * and their level on it. The same character shows in every workspace: XP belongs to the
- * person. Clicking it opens the Boy/Girl then hairstyle picker; the ring previews live.
+ * The person's character at the top of the sidebar, inside a thin ring, with a badge for
+ * the one stat they picked. The same character shows in every workspace; the stat reads
+ * this workspace's sessions. Clicking the character opens the picker; clicking a badge
+ * that counts sessions opens the first of them.
  */
 export function SidebarCharacter({
   user,
   fallback,
+  teamId,
+  sessions = [],
+  onOpenSession,
   onUserUpdated,
 }: {
   user: UserInfo
   /** What the ring holds before a pick: the workspace tile it replaces. */
   fallback: ReactNode
+  teamId?: string
+  /** This workspace's sessions, as the sidebar lists them. */
+  sessions?: readonly AgentConversation[]
+  onOpenSession?: (sessionId: string) => void
   onUserUpdated: (user: UserInfo) => void
 }) {
-  const { level, status, levelledUp } = useProfileLevel(user.id)
   const { chosen, note, pick } = useCharacterPick(user, onUserUpdated)
+  const { stat, pick: pickStat, failed } = useBadgeStat(user, onUserUpdated)
+  const reading = useBadgeReading(stat, teamId, sessions)
   const [preview, setPreview] = useState<ProfileCharacter | null>(null)
   const [open, setOpen] = useState(false)
-  // Hover and keyboard focus each play the loop once; reaching a new level adds one more.
-  const [hovers, setHovers] = useState(0)
-  const plays = hovers + (levelledUp ? 1 : 0)
+  // Hover and keyboard focus each play the loop once.
+  const [plays, setPlays] = useState(0)
   const character = preview ?? chosen
-  const levelPart = level ? `, level ${String(level.level)}` : ''
-  const label = chosen ? `Your character${levelPart}. Change character` : 'Pick your character'
+  const statPart = reading.badge ? `. ${reading.summary}` : ''
+  const label = chosen ? `Your character${statPart}. Change character` : 'Pick your character'
+  const target = reading.badge && reading.sessionId ? reading.sessionId : undefined
 
   function choose(next: ProfileCharacter) {
     setPreview(null)
@@ -164,6 +61,9 @@ export function SidebarCharacter({
   else if (preview && preview !== chosen) hint = `Previewing ${hairstyleLabel(preview)}`
   else if (note && note.kind !== 'failed') hint = note.text
 
+  const badgeClass =
+    'absolute -bottom-0.5 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-zViolet-500 px-[3px] text-[9px] font-bold tabular-nums leading-none text-white'
+
   return (
     <Popover.Root
       open={open}
@@ -172,39 +72,58 @@ export function SidebarCharacter({
         if (!next) setPreview(null)
       }}
     >
-      <Tooltip
-        content={chosen ? 'Your character' : 'Pick your character'}
-        side="bottom"
-        disabled={open}
-      >
-        <Popover.Trigger
-          aria-label={label}
-          onPointerEnter={() => setHovers((count) => count + 1)}
-          onFocus={(event) => {
-            if (event.currentTarget.matches(':focus-visible')) setHovers((count) => count + 1)
-          }}
-          className={clsx(
-            'titlebar-no-drag relative flex-none rounded-full outline-none focus-visible:ring-2 focus-visible:ring-zViolet-accent/60',
-            levelledUp && 'character-level-up',
-          )}
+      <span className="relative flex-none">
+        <Tooltip
+          content={chosen ? reading.summary : 'Pick your character'}
+          side="bottom"
+          disabled={open}
         >
-          <CharacterRing
-            size={26}
-            stroke={2}
-            character={character}
-            fallback={fallback}
-            level={level}
-            plays={plays}
-            badge="small"
-          />
-          {!chosen && (
-            <span
-              aria-hidden
-              className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-zViolet-accent ring-2 ring-[rgb(var(--color-background-base))]"
+          <Popover.Trigger
+            aria-label={label}
+            onPointerEnter={() => setPlays((count) => count + 1)}
+            onFocus={(event) => {
+              if (event.currentTarget.matches(':focus-visible')) setPlays((count) => count + 1)
+            }}
+            className="titlebar-no-drag relative block flex-none rounded-full outline-none focus-visible:ring-2 focus-visible:ring-zViolet-accent/60"
+          >
+            <CharacterRing
+              size={26}
+              stroke={2}
+              character={character}
+              fallback={fallback}
+              fraction={reading.fraction}
+              plays={plays}
             />
-          )}
-        </Popover.Trigger>
-      </Tooltip>
+            {!chosen && (
+              <span
+                aria-hidden
+                className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-zViolet-accent ring-2 ring-[rgb(var(--color-background-base))]"
+              />
+            )}
+          </Popover.Trigger>
+        </Tooltip>
+        {chosen && reading.badge && target && onOpenSession ? (
+          <button
+            type="button"
+            aria-label={`${reading.summary}. Open the first one`}
+            title={reading.summary}
+            onClick={() => onOpenSession(target)}
+            className={clsx(
+              badgeClass,
+              'titlebar-no-drag outline-none hover:bg-zViolet-600 focus-visible:ring-2 focus-visible:ring-zViolet-accent/60',
+            )}
+          >
+            {reading.badge}
+          </button>
+        ) : (
+          chosen &&
+          reading.badge && (
+            <span aria-hidden className={clsx(badgeClass, 'pointer-events-none')}>
+              {reading.badge}
+            </span>
+          )
+        )}
+      </span>
       <Popover.Portal>
         <Popover.Positioner side="bottom" align="start" sideOffset={8} className="z-[1000]">
           <Popover.Popup
@@ -218,29 +137,30 @@ export function SidebarCharacter({
             }
             style={{ transformOrigin: 'top left' }}
           >
-            <div className={clsx('flex items-center gap-3.5', levelledUp && 'character-level-up')}>
-              <CharacterRing
-                size={64}
-                stroke={4}
-                character={character}
-                fallback={fallback}
-                level={level}
-                looping
-                badge="large"
-              />
+            <div className="flex items-center gap-3.5">
+              <span className="relative flex-none">
+                <CharacterRing
+                  size={64}
+                  stroke={4}
+                  character={character}
+                  fallback={fallback}
+                  fraction={reading.fraction}
+                  looping
+                />
+                {reading.badge && (
+                  <span className="absolute bottom-[-5px] left-1/2 flex h-5 min-w-6 -translate-x-1/2 items-center justify-center rounded-full bg-zViolet-500 px-1.5 text-[11px] font-bold tabular-nums leading-none text-white">
+                    {reading.badge}
+                  </span>
+                )}
+              </span>
               <div className="min-w-0">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-zViolet-accent">
-                  {level ? `Level ${String(level.level)} · ${levelTitle(level.level)}` : ' '}
-                </div>
                 <div className="truncate text-[14px] font-semibold text-main">
                   {user.name || user.username}
                 </div>
-                <div className="flex flex-wrap gap-x-2.5 text-[12px] text-secondary tabular-nums">
-                  <LevelLine level={level} status={status} />
-                </div>
+                <div className="text-[12px] text-secondary">{reading.summary}</div>
               </div>
             </div>
-            <div className="mb-3 mt-2 min-h-[18px] text-[12px]">
+            <div className="mb-2.5 mt-2 min-h-[18px] text-[12px]">
               {note?.kind === 'failed' && !preview ? (
                 <div role="alert" className="flex items-center gap-2 text-red-400">
                   Couldn't save your character.
@@ -258,6 +178,7 @@ export function SidebarCharacter({
                 </div>
               )}
             </div>
+            <BadgeStatPicker value={stat} failed={failed} onPick={(next) => void pickStat(next)} />
             <ProfileCharacterPicker value={chosen} onPick={choose} onPreview={setPreview} />
           </Popover.Popup>
         </Popover.Positioner>

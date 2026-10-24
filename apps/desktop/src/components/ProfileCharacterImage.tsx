@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 
 import { usePlayOnce } from '../hooks/usePlayOnce'
 import { imageMotion, loopingSvgUrl, readyLoopingSvgUrl } from '../lib/botAvatarMotion'
-import { profileCharacterLabel, profileCharacterSrc } from '../lib/profileLevel'
+import { profileCharacterLabel, profileCharacterSrc } from '../lib/profileCharacter'
 
 import type { ProfileCharacter } from '../types'
 

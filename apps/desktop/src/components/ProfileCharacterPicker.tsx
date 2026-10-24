@@ -10,9 +10,9 @@ import {
   hairstyleLabel,
   profileLook,
   profileLookLabel,
-} from '../lib/profileLevel'
+} from '../lib/profileCharacter'
 
-import type { ProfileLook } from '../lib/profileLevel'
+import type { ProfileLook } from '../lib/profileCharacter'
 import type { ProfileCharacter } from '../types'
 import type React from 'react'
 

@@ -1,12 +1,12 @@
 import { ObjectId } from 'mongodb'
 import { z } from 'zod'
 
-import { agentMessages } from '@/lib/agent/db/shared'
+import { agentConversations } from '@/lib/agent/db/shared'
 import { AppError } from '@/lib/errors'
 
 import { users, mapUser } from './shared'
 
-import type { ProfileCharacter } from './types'
+import type { BadgeStat, ProfileCharacter } from './types'
 
 export const PROFILE_CHARACTERS = [
   'boy-fringe',
@@ -39,38 +39,31 @@ export async function setProfileCharacter(userId: string, input: unknown) {
   return mapUser(user)
 }
 
-/** XP for each day the person sent at least one message. */
-export const XP_PER_DAY = 100
+/** What the sidebar badge counts, in the order the picker lists them. */
+export const BADGE_STATS = [
+  'merged-prs',
+  'running',
+  'waiting',
+  'quota',
+  'none',
+] as const satisfies readonly BadgeStat[]
 
-/** Total XP that reaches `level`. Each level costs one more day than the one before. */
-export function xpToReach(level: number): number {
-  return XP_PER_DAY * ((level * (level + 1)) / 2 - 1)
-}
+const badgeStatSchema = z.object({ badgeStat: z.enum(BADGE_STATS) }).strict()
 
-export type ProfileLevel = {
-  activeDays: number
-  xp: number
-  level: number
-  /** XP earned inside the current level. */
-  levelXp: number
-  /** XP the current level takes from start to the next one. */
-  levelSize: number
-}
+/** Picks what the sidebar badge shows. */
+export async function setBadgeStat(userId: string, input: unknown) {
+  const parsed = badgeStatSchema.safeParse(input)
 
-export function levelForActiveDays(activeDays: number): ProfileLevel {
-  const days = Math.max(0, Math.floor(activeDays))
-  const xp = days * XP_PER_DAY
-  let level = 1
+  if (!parsed.success) throw new AppError(400, 'invalid_badge_stat', 'Pick one of the badge stats')
+  const user = await users().findOneAndUpdate(
+    { _id: new ObjectId(userId), deletedAt: { $exists: false } },
+    { $set: { badgeStat: parsed.data.badgeStat, updatedAt: new Date() } },
+    { returnDocument: 'after' },
+  )
 
-  while (xpToReach(level + 1) <= xp) level += 1
+  if (!user) throw new AppError(404, 'user_not_found', 'Your account no longer exists')
 
-  return {
-    activeDays: days,
-    xp,
-    level,
-    levelXp: xp - xpToReach(level),
-    levelSize: xpToReach(level + 1) - xpToReach(level),
-  }
+  return mapUser(user)
 }
 
 function validTimeZone(timeZone: string | undefined): string {
@@ -84,59 +77,94 @@ function validTimeZone(timeZone: string | undefined): string {
   }
 }
 
-/**
- * Every user message written since this date carries `metadata.sender`; Discord
- * and Lark were the last to gain it (#149, merged 2026-10-10). Older messages
- * may have none, and for those the conversation owner is the author.
- */
-export const UNATTRIBUTED_BEFORE = new Date('2026-10-12T00:00:00Z')
+/** Milliseconds the zone is ahead of UTC at `at`. */
+function zoneOffset(at: number, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+  }).formatToParts(new Date(at))
+  const part = (type: string) => Number(parts.find((entry) => entry.type === type)?.value)
+
+  return (
+    Date.UTC(
+      part('year'),
+      part('month') - 1,
+      part('day'),
+      part('hour'),
+      part('minute'),
+      part('second'),
+    ) -
+    Math.floor(at / 1000) * 1000
+  )
+}
+
+/** The UTC instant of local midnight on the first of `month` (0-based, may overflow) in the zone. */
+function monthStart(year: number, month: number, timeZone: string): Date {
+  const guess = Date.UTC(year, month, 1)
+  const first = guess - zoneOffset(guess, timeZone)
+
+  return new Date(guess - zoneOffset(first, timeZone))
+}
+
+/** The calendar month containing `now` in the person's time zone, as UTC instants. */
+export function currentMonth(now: Date, timeZone?: string): { start: Date; end: Date } {
+  const zone = validTimeZone(timeZone)
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: zone,
+    year: 'numeric',
+    month: 'numeric',
+  }).formatToParts(now)
+  const year = Number(parts.find((part) => part.type === 'year')?.value)
+  const month = Number(parts.find((part) => part.type === 'month')?.value)
+
+  return { start: monthStart(year, month - 1, zone), end: monthStart(year, month, zone) }
+}
 
 /**
- * Distinct days, in the person's time zone, on which they sent a message
- * themselves. An agent token acting for them does not count, and neither does
- * a turn they did not write. Each branch has its own index, and the
- * unattributed one is capped at a fixed date, so the cost stops growing.
+ * Distinct GitHub PRs linked to sessions the person owns in this team that merged this
+ * month. The merge time comes from the PR webhook and link refresh Nuphos already
+ * handles; PRs merged before it was recorded carry none and are not counted.
  */
-export function activeDaysPipeline(userId: string, timeZone?: string) {
+export function mergedPrsPipeline(
+  userId: string,
+  teamId: string,
+  month: { start: Date; end: Date },
+) {
+  const merged = {
+    provider: 'github',
+    state: 'merged',
+    mergedAt: { $gte: month.start.toISOString(), $lt: month.end.toISOString() },
+  }
+
   return [
+    { $match: { userId, teamId, linkedResources: { $elemMatch: merged } } },
+    { $project: { _id: 0, linkedResources: 1 } },
+    { $unwind: '$linkedResources' },
     {
-      $match: {
-        $or: [
-          {
-            'metadata.sender.type': 'user',
-            'metadata.sender.id': userId,
-            'metadata.sender.onBehalfOf': { $exists: false },
-            role: 'user',
-          },
-          {
-            userId,
-            role: 'user',
-            createdAt: { $lt: UNATTRIBUTED_BEFORE },
-            metadata: { $exists: false },
-          },
-        ],
-      },
+      $match: Object.fromEntries(
+        Object.entries(merged).map(([field, value]) => [`linkedResources.${field}`, value]),
+      ),
     },
-    { $project: { _id: 0, createdAt: 1 } },
-    {
-      $group: {
-        _id: {
-          $dateToString: {
-            date: '$createdAt',
-            format: '%Y-%m-%d',
-            timezone: validTimeZone(timeZone),
-          },
-        },
-      },
-    },
-    { $count: 'days' },
+    { $group: { _id: '$linkedResources.key' } },
+    { $count: 'prs' },
   ]
 }
 
-export async function readProfileLevel(userId: string, timeZone?: string): Promise<ProfileLevel> {
-  const [row] = await agentMessages()
-    .aggregate<{ days: number }>(activeDaysPipeline(userId, timeZone))
+export async function countMergedPrs(
+  userId: string,
+  teamId: string,
+  timeZone?: string,
+  now = new Date(),
+): Promise<{ count: number }> {
+  const [row] = await agentConversations()
+    .aggregate<{ prs: number }>(mergedPrsPipeline(userId, teamId, currentMonth(now, timeZone)))
     .toArray()
 
-  return levelForActiveDays(row?.days ?? 0)
+  return { count: row?.prs ?? 0 }
 }

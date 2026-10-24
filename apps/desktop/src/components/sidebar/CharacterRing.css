@@ -2,52 +2,8 @@
   transition: stroke-dashoffset 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* A level reached since this computer last showed one: the character hops and the number pops, once. */
-.character-level-up .character-ring-character {
-  animation: character-level-hop 900ms ease-out 1;
-}
-.character-level-up .character-ring-badge {
-  animation: character-level-pop 600ms cubic-bezier(0.2, 1.6, 0.4, 1) 1;
-}
-.character-level-up .character-ring-fill {
-  animation: character-level-flash 700ms 1;
-}
-
-@keyframes character-level-hop {
-  0%,
-  100% {
-    transform: none;
-  }
-  15% {
-    transform: scale(1.1, 0.88);
-  }
-  35% {
-    transform: translateY(-16%) scale(0.95, 1.06);
-  }
-  55% {
-    transform: scale(1.08, 0.92);
-  }
-  70% {
-    transform: translateY(-6%);
-  }
-}
-@keyframes character-level-pop {
-  40% {
-    transform: scale(1.4);
-  }
-}
-@keyframes character-level-flash {
-  40% {
-    filter: brightness(1.5) saturate(1.3);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .character-ring-fill,
-  .character-level-up .character-ring-character,
-  .character-level-up .character-ring-badge,
-  .character-level-up .character-ring-fill {
+  .character-ring-fill {
     transition: none;
-    animation: none;
   }
 }

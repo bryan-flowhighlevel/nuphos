@@ -4,7 +4,7 @@ import { isValidUserInfo } from '../auth-status.ts'
 import { apiErrorMessage, readConfig, writeConfig } from './config.ts'
 
 import type { UserInfo } from '../auth-status.ts'
-import type { ProfileCharacter, SetCharacterResult } from '../../src/types/team.ts'
+import type { BadgeStat, ProfileCharacter, ProfileSaveResult } from '../../src/types/team.ts'
 
 export type ProfileUpdate = { name: string; username: string; avatarURL: string }
 
@@ -42,9 +42,7 @@ export async function routeMissing(res: Response): Promise<boolean> {
 }
 
 /** Picks the person's profile character, or clears it with null. `unsupported` when the server has no such route yet. */
-export async function setCharacter(
-  character: ProfileCharacter | null,
-): Promise<SetCharacterResult> {
+export async function setCharacter(character: ProfileCharacter | null): Promise<ProfileSaveResult> {
   const { res, token } = await send('/auth/me/character', {
     method: 'PUT',
     headers: { 'content-type': 'application/json' },
@@ -56,27 +54,33 @@ export async function setCharacter(
   return { user: await acceptUser(res, token) }
 }
 
-export type ProfileLevel = {
-  activeDays: number
-  xp: number
-  level: number
-  levelXp: number
-  levelSize: number
+/** Picks what the sidebar badge shows. `unsupported` when the server has no such route yet. */
+export async function setBadgeStat(badgeStat: BadgeStat): Promise<ProfileSaveResult> {
+  const { res, token } = await send('/auth/me/badge-stat', {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ badgeStat }),
+  })
+
+  if (await routeMissing(res)) return { unsupported: true }
+
+  return { user: await acceptUser(res, token) }
 }
 
-/** The person's level from the days they used Nuphos, counted in their own time zone. Null when the server has no such route yet. */
-export async function readLevel(timeZone: string): Promise<ProfileLevel | null> {
-  const { res } = await send(`/auth/me/level?timeZone=${encodeURIComponent(timeZone)}`, {
-    method: 'GET',
-  })
+/** PRs linked to the person's sessions in this team that merged this month. Null when the server has no such route yet. */
+export async function readMergedPrs(
+  teamId: string,
+  timeZone: string,
+): Promise<{ count: number } | null> {
+  const query = new URLSearchParams({ teamId, timeZone })
+  const { res } = await send(`/auth/me/merged-prs?${query.toString()}`, { method: 'GET' })
 
   if (await routeMissing(res)) return null
   if (!res.ok) throw new Error(await apiErrorMessage(res))
 
-  return (await res.json()) as ProfileLevel
+  return (await res.json()) as { count: number }
 }
 
-/** Uploads an already-cropped image; the backend re-encodes it to a 256px WebP. */
 export function uploadAvatar(image: Uint8Array) {
   return sendProfileRequest('/auth/me/avatar', {
     method: 'PUT',

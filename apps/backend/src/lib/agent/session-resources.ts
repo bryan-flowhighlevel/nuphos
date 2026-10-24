@@ -53,6 +53,8 @@ export type SessionResource = {
   stateType?: string
   repository?: string
   number?: number
+  /** When a linked PR merged, from GitHub; absent for PRs merged before it was recorded. */
+  mergedAt?: string
   linkedAt: string
 }
 export type ResourceActor = { userId: string; teamId: string; sessionId: string }
@@ -150,6 +152,7 @@ async function resolveResource(
       title: string
       state: string
       merged: boolean
+      merged_at: string | null
       base: { repo: { id: number; full_name: string } }
     }
 
@@ -165,6 +168,7 @@ async function resolveResource(
       number: pr.number,
       title: pr.title.slice(0, 300),
       state: pr.merged ? 'merged' : pr.state,
+      ...(pr.merged && pr.merged_at ? { mergedAt: pr.merged_at } : {}),
       url: `https://github.com/${repository}/pull/${pr.number}`,
     }
   }
@@ -281,6 +285,7 @@ export async function refreshSessionResource(
         'linkedResources.$.state': fresh.state,
         'linkedResources.$.url': fresh.url,
         ...(fresh.stateType ? { 'linkedResources.$.stateType': fresh.stateType } : {}),
+        ...(fresh.mergedAt ? { 'linkedResources.$.mergedAt': fresh.mergedAt } : {}),
       },
     },
   )

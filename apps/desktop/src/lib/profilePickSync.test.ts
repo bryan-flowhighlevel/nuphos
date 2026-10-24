@@ -1,10 +1,17 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { pendingPick, savePick, shownCharacter } from './profileCharacterSync.ts'
+import {
+  BADGE_STAT_SLOT,
+  pendingPick,
+  pendingValue,
+  savePick,
+  saveValue,
+  shownCharacter,
+} from './profilePickSync.ts'
 
-import type { PickStorage } from './profileCharacterSync.ts'
-import type { ProfileCharacter, SetCharacterResult, UserInfo } from '../types/team.ts'
+import type { PickStorage } from './profilePickSync.ts'
+import type { ProfileCharacter, ProfileSaveResult, UserInfo } from '../types/team.ts'
 
 const user: UserInfo = { id: 'u1', name: 'Alex', email: 'a@example.com', username: 'alex' }
 
@@ -19,7 +26,7 @@ function memory(): PickStorage & { data: Map<string, string> } {
   }
 }
 
-const answer = (result: SetCharacterResult | Error) => async (_c: ProfileCharacter) => {
+const answer = (result: ProfileSaveResult | Error) => async (_c: ProfileCharacter) => {
   if (result instanceof Error) throw result
 
   return result
@@ -65,4 +72,32 @@ test('an unknown stored value is ignored, and picks are kept per person', () => 
   assert.equal(shownCharacter({ ...user, character: 'boy-side' }, undefined), 'boy-side')
   storage.setItem('nuphos.profileCharacter.pending.u2', 'girl-bangs')
   assert.equal(pendingPick(storage, 'u1'), undefined)
+})
+
+test('the badge stat is kept and synced the same way, under its own key', async () => {
+  const storage = memory()
+  const saved = { ...user, badgeStat: 'waiting' as const }
+
+  const kept = await saveValue(BADGE_STAT_SLOT, 'quota', 'u1', {
+    storage,
+    send: async () => ({ unsupported: true }),
+  })
+
+  assert.deepEqual(kept, { kind: 'kept-here' })
+  assert.equal(pendingValue(BADGE_STAT_SLOT, storage, 'u1'), 'quota')
+  assert.equal(pendingPick(storage, 'u1'), undefined, 'a stat never reads as a character')
+
+  const result = await saveValue(BADGE_STAT_SLOT, 'waiting', 'u1', {
+    storage,
+    send: async () => ({ user: saved }),
+  })
+
+  assert.deepEqual(result, { kind: 'saved', user: saved })
+  assert.equal(pendingValue(BADGE_STAT_SLOT, storage, 'u1'), undefined)
+  storage.setItem('nuphos.badgeStat.pending.u1', 'xp')
+  assert.equal(
+    pendingValue(BADGE_STAT_SLOT, storage, 'u1'),
+    undefined,
+    'an unknown stat is ignored',
+  )
 })

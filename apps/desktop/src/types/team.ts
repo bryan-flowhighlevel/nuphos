@@ -9,25 +9,18 @@ export type UserInfo = {
   language?: string
   createdAt?: string
   character?: ProfileCharacter
+  badgeStat?: BadgeStat
 }
 
 /** A profile character: a look (boy or girl) and one of its three hairstyles. */
 export type ProfileCharacter =
   'boy-fringe' | 'boy-side' | 'boy-curly' | 'girl-waves' | 'girl-bangs' | 'girl-pony'
 
-/** Days of use turned into a level: see apps/backend/src/lib/identity/character.ts. */
-export type ProfileLevel = {
-  activeDays: number
-  xp: number
-  level: number
-  /** XP earned inside the current level. */
-  levelXp: number
-  /** XP the current level takes from start to the next one. */
-  levelSize: number
-}
+/** What the sidebar badge counts. Absent on the user means `merged-prs`. */
+export type BadgeStat = 'merged-prs' | 'running' | 'waiting' | 'quota' | 'none'
 
-/** Saving a character: the updated user, or `unsupported` when the server has no such route yet. */
-export type SetCharacterResult = { user: UserInfo } | { unsupported: true }
+/** Saving a profile pick: the updated user, or `unsupported` when the server has no such route yet. */
+export type ProfileSaveResult = { user: UserInfo } | { unsupported: true }
 
 export type AuthStatus = { loggedIn: false } | { loggedIn: true; user: UserInfo; token: string }
 

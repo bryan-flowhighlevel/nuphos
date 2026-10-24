@@ -26,7 +26,11 @@ const payloadSchema = z.object({
   action: z.string().max(100).optional(),
   sender: z.object({ type: z.string(), login: z.string() }).optional(),
   pull_request: pr
-    .extend({ state: z.string().optional(), merged: z.boolean().optional() })
+    .extend({
+      state: z.string().optional(),
+      merged: z.boolean().optional(),
+      merged_at: z.string().datetime().nullable().optional(),
+    })
     .optional(),
   issue: pr.extend({ pull_request: z.unknown().optional() }).optional(),
   check_suite: z
@@ -200,6 +204,7 @@ export function githubPullState(event: string, payload: unknown) {
   return {
     key: `github/${String(installation.id)}/${String(repository.id)}/${String(pull.number)}`,
     state: pull.merged ? 'merged' : pull.state,
+    ...(pull.merged && pull.merged_at ? { mergedAt: pull.merged_at } : {}),
   }
 }
 
@@ -216,7 +221,14 @@ export async function routeResourceWebhook(event: string, payload: unknown, deli
   if (pullState) {
     await agentConversations().updateMany(
       { 'linkedResources.key': pullState.key },
-      { $set: { 'linkedResources.$[resource].state': pullState.state } },
+      {
+        $set: {
+          'linkedResources.$[resource].state': pullState.state,
+          ...(pullState.mergedAt
+            ? { 'linkedResources.$[resource].mergedAt': pullState.mergedAt }
+            : {}),
+        },
+      },
       { arrayFilters: [{ 'resource.key': pullState.key }] },
     )
   }

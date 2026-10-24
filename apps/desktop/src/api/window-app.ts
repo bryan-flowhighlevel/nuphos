@@ -32,9 +32,9 @@ import type {
   PersonalCredential,
   PersonalCredentialDeepLinkPayload,
   PersonalCredentialProvider,
+  BadgeStat,
   ProfileCharacter,
-  ProfileLevel,
-  SetCharacterResult,
+  ProfileSaveResult,
   UpdaterState,
   UserInfo,
 } from '../types/team.ts'
@@ -47,8 +47,9 @@ export type WindowAppApi = {
     provider: PersonalCredentialProvider,
   ): Promise<{ authorizeUrl: string; state: string }>
   atlasDeletePersonalCredential(provider: PersonalCredentialProvider): Promise<void>
-  authSetCharacter(character: ProfileCharacter | null): Promise<SetCharacterResult>
-  authReadLevel(timeZone: string): Promise<ProfileLevel | null>
+  authSetCharacter(character: ProfileCharacter | null): Promise<ProfileSaveResult>
+  authSetBadgeStat(badgeStat: BadgeStat): Promise<ProfileSaveResult>
+  authReadMergedPrs(teamId: string, timeZone: string): Promise<{ count: number } | null>
   authUploadAvatar(image: Uint8Array): Promise<UserInfo>
   apiUrlSync(): string
   authRemoveAvatar(): Promise<UserInfo>

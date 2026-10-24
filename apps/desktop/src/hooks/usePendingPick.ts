@@ -1,19 +1,20 @@
 import { useSyncExternalStore } from 'react'
 
-import { pendingPick, pendingPickKey } from '../lib/profileCharacterSync'
+import { CHARACTER_SLOT, pendingValue } from '../lib/profilePickSync'
 
+import type { PickSlot } from '../lib/profilePickSync'
 import type { ProfileCharacter } from '../types'
 
 const listeners = new Set<() => void>()
 
-/** Tells every view showing the person's character that this computer's pick changed. */
+/** Tells every view showing the person's picks that this computer's pending picks changed. */
 export function notifyPendingPick(): void {
   for (const listener of listeners) listener()
 }
 
 function subscribe(listener: () => void) {
   const onStorage = (event: StorageEvent) => {
-    if (event.key?.startsWith(pendingPickKey(''))) listener()
+    if (event.key?.startsWith('nuphos.')) listener()
   }
 
   listeners.add(listener)
@@ -26,6 +27,13 @@ function subscribe(listener: () => void) {
 }
 
 /** A pick this computer still has to save for `userId`, kept in step across views and windows. */
+export function usePendingValue<T extends string>(
+  slot: PickSlot<T>,
+  userId: string,
+): T | undefined {
+  return useSyncExternalStore(subscribe, () => pendingValue(slot, localStorage, userId))
+}
+
 export function usePendingPick(userId: string): ProfileCharacter | undefined {
-  return useSyncExternalStore(subscribe, () => pendingPick(localStorage, userId))
+  return usePendingValue(CHARACTER_SLOT, userId)
 }

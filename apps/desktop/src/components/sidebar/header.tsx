@@ -1,7 +1,7 @@
 import { ChevronRight, ChevronsUpDown, Loader2, LogOut, Settings } from 'lucide-react'
 
 import { usePendingPick } from '../../hooks/usePendingPick'
-import { shownCharacter } from '../../lib/profileCharacterSync'
+import { shownCharacter } from '../../lib/profilePickSync'
 import { Avatar } from '../Avatar'
 import { SidebarCharacter } from './SidebarCharacter'
 import { ProfileCharacterImage } from '../ProfileCharacterImage'
@@ -21,6 +21,7 @@ import { renderWorkspaceMenuOptions } from '../WorkspaceMenuOptions'
 import { SidebarHistoryButtons } from './history-buttons'
 import { SidebarToggleButton } from './nav-stack'
 
+import type { AgentConversation } from '../../api'
 import type { HistoryTimeline } from './historyRows'
 import type { UserInfo } from '../../types'
 import type { BreadcrumbSegment } from '../Toolbar'
@@ -88,6 +89,10 @@ type TeamSwitcherActions = {
   /** The signed-in person: their character takes the workspace tile's place. */
   user?: UserInfo | null
   onUserUpdated?: (user: UserInfo) => void
+  /** This workspace and its sessions, for the stat on the character's badge. */
+  teamId?: string
+  sessions?: readonly AgentConversation[]
+  onOpenSession?: (sessionId: string) => void
 }
 
 /** The team switcher, revealed from its skeleton once the team segment loads. */
@@ -112,6 +117,9 @@ function TeamSwitcherMenu({
   onCreateTeam,
   user,
   onUserUpdated,
+  teamId,
+  sessions,
+  onOpenSession,
 }: TeamSwitcherActions & { teamSegment: BreadcrumbSegment }) {
   const tile = (
     <span className="flex items-center flex-shrink-0 [&>*]:!h-5 [&>*]:!w-5 [&>svg]:!h-5 [&>svg]:!w-5">
@@ -125,7 +133,14 @@ function TeamSwitcherMenu({
     <div className="px-2.5 pb-1.5 titlebar-no-drag flex items-center gap-1">
       {character && (
         <span className="flex h-9 flex-none items-center pl-1.5">
-          <SidebarCharacter user={user} fallback={tile} onUserUpdated={onUserUpdated} />
+          <SidebarCharacter
+            user={user}
+            fallback={tile}
+            teamId={teamId}
+            sessions={sessions}
+            onOpenSession={onOpenSession}
+            onUserUpdated={onUserUpdated}
+          />
         </span>
       )}
       <Menu
