@@ -29,9 +29,16 @@ export function teamPageLocation(
   if (active === 'team.agent') {
     const base = `/teams/${pathSegment(scope.teamId)}/agent`
 
-    return pageLocation(
-      navigation.agentSessionId ? `${base}/${pathSegment(navigation.agentSessionId)}` : base,
-    )
+    if (!navigation.agentSessionId) return pageLocation(base)
+    const artifact = navigation.agentArtifact
+    const query = artifact
+      ? `?${new URLSearchParams({
+          artifact: artifact.artifactId,
+          ...(artifact.version ? { version: String(artifact.version) } : {}),
+        })}`
+      : ''
+
+    return pageLocation(`${base}/${pathSegment(navigation.agentSessionId)}${query}`)
   }
   if (active === 'team.observability') {
     return pageLocation(`/teams/${pathSegment(scope.teamId)}/observability`)

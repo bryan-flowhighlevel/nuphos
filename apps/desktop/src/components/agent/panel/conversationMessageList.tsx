@@ -4,7 +4,10 @@ import { Fragment, useEffect, useMemo } from 'react'
 import { runtimeAllows, runtimeIsExecuting } from '../../../lib/runtimeExecution'
 import { publishSessionDesktops } from '../../../lib/sessionDesktops'
 import { useReportVisibleError } from '../../VisibleErrorReporter'
-import { usePublishSessionArtifacts } from '../artifacts/useSessionArtifacts'
+import {
+  useOpenRequestedArtifact,
+  usePublishSessionArtifacts,
+} from '../artifacts/useSessionArtifacts'
 
 import { conversationActivity } from './activity'
 import { toolAnchorIds } from './chatTarget'
@@ -75,6 +78,7 @@ export function ConversationMessageList({
   }, [tab.sessionId, teamId, tab.runtimeState, tab.foreign])
   useEffect(() => () => publishSessionDesktops(tab.sessionId, null), [tab.sessionId])
   usePublishSessionArtifacts(tab.sessionId, tab.messages)
+  useOpenRequestedArtifact(tab.sessionId, teamId, onOpenNuphosLink)
   const downloadsByMessage = useTransferDownloads(tab, teamId, hasEarlier)
   const messages = useMemo(() => collapseRepeatedFailures(tab.messages), [tab.messages])
   const timeline = placeTimelineEvents(messages, tab.timelineEvents, hasEarlier)

@@ -29,8 +29,9 @@ export function createArtifactTool() {
       'mobile-first and fluid: include <meta name="viewport" content="width=device-width, initial-scale=1">, ' +
       'size with %, rem, fr and clamp() rather than fixed pixel widths, let flex and grid rows wrap, keep ' +
       'media at max-width:100%, make tap targets at least 44px, and never require horizontal scrolling. ' +
-      'It should read well from 320px to a full desktop. On a foldable, Nuphos keeps the artifact off the ' +
-      'fold itself, so do not use viewport segments, which are not exposed inside the artifact frame. ' +
+      'It should read well from 320px to a full desktop. On a foldable, let the layout reflow; viewport ' +
+      'segments are not exposed inside the artifact frame. People may download a page as one file to ' +
+      'send on, so prefer inline code and data over files fetched at run time. ' +
       'Give an svg a viewBox and no fixed width or height so it scales.',
     inputSchema: z.object({
       label: labelField,

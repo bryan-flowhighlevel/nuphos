@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
+import routeAccess from '@/routes/route-access.json'
 import { toolModuleFromAiSdkTools } from '@/lib/claude-code-preview/preview-tools/ai-sdk-adapter'
 
 import { ARTIFACT_MAX_CHARS, createArtifactTool } from './artifact-tool'
@@ -79,5 +80,13 @@ describe('render_artifact', () => {
       (await call({ ...base, kind: 'markdown', content: 'x'.repeat(ARTIFACT_MAX_CHARS + 1) }))
         .isError,
     ).toBe(true)
+  })
+})
+
+describe('artifacts are never served publicly', () => {
+  // route-access.test.ts fails on any served route missing from this table, so
+  // an empty match here means no artifact route exists, public or otherwise.
+  test('no route serves an artifact', () => {
+    expect(Object.keys(routeAccess).filter((route) => /artifact/i.test(route))).toEqual([])
   })
 })

@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 
 import {
+  artifactPagePath,
+  pickArtifactVersion,
   publishSessionArtifacts,
   readArtifactCall,
   readArtifactLine,
   readPickedArtifactVersion,
   releaseSessionArtifacts,
   subscribeSessionArtifacts,
+  takeRequestedArtifact,
 } from '../../../lib/sessionArtifacts'
 
 import { collectArtifacts } from './artifactPayload'
@@ -59,4 +62,29 @@ export function useArtifactCall(toolCallId: string) {
   const line = useArtifactLine(sessionId, artifactId ?? '')
 
   return sessionId && artifactId && line.length > 0 ? { sessionId, artifactId, line } : null
+}
+
+/**
+ * Opens an artifact a link asked for once this chat holds it, the way clicking
+ * its card would: the pinned version beside the conversation.
+ */
+export function useOpenRequestedArtifact(
+  sessionId: string,
+  teamId: string | undefined,
+  open: ((href: string, beside: boolean) => boolean) | undefined,
+) {
+  useEffect(() => {
+    if (!teamId || !open) return
+    const check = () => {
+      const request = takeRequestedArtifact(sessionId)
+
+      if (!request) return
+      pickArtifactVersion(sessionId, request.artifactId, request.version)
+      open(artifactPagePath(teamId, request.artifactId), false)
+    }
+
+    check()
+
+    return subscribeSessionArtifacts(check)
+  }, [sessionId, teamId, open])
 }

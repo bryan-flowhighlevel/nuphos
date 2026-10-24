@@ -1,6 +1,5 @@
 import { MongoServerError } from 'mongodb'
 
-import { setupArtifactShareIndexes } from '@/lib/agent/artifact-shares'
 import { setupAutoModeIndexes } from '@/lib/agent/auto-mode/store'
 import { backfillConversationWatchers, setupAgentIndexes } from '@/lib/agent/db'
 import { setupDeviceExecAuditIndexes } from '@/lib/agent/devices/audit'
@@ -82,7 +81,6 @@ export async function setupIndexes(): Promise<void> {
     ['runtime-image-audit', setupRuntimeImageAuditIndexes],
     ['invitations', setupInvitationIndexes],
     ['agent', setupAgentIndexes],
-    ['artifact-shares', setupArtifactShareIndexes],
     ['token-usage', setupTokenUsageIndexes],
     ['directory', setupDirectoryIndexes],
     ['triggers', setupTriggerIndexes],

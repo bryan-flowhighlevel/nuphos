@@ -1,5 +1,4 @@
 import { agentApi } from './api/agent-api.ts'
-import { artifactShareApi } from './api/artifact-share-api.ts'
 import { appApi } from './api/app-api.ts'
 import { awsApi } from './api/aws-api.ts'
 import { cloudflareApi } from './api/cloudflare-api.ts'
@@ -45,7 +44,6 @@ export * from './api/agent-audit-types.ts'
 export * from './api/agent-trigger-types.ts'
 export * from './api/agent-types.ts'
 export * from './api/app-types.ts'
-export * from './api/artifact-share-types.ts'
 export * from './api/device-types.ts'
 export * from './api/errors.ts'
 export * from './api/plan-types.ts'
@@ -86,7 +84,6 @@ const rawApi = {
   ...cloudflareApi,
   ...cloudflarePagesApi,
   ...providerAccessApi,
-  ...artifactShareApi,
   ...databaseApi,
   ...monitoringApi,
   ...integrationsApi,

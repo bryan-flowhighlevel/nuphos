@@ -8,12 +8,12 @@ import { svgDataUrl } from '../components/agent/artifacts/artifactSandbox'
 import { ArtifactToolbar } from '../components/agent/artifacts/ArtifactToolbar'
 import { ARTIFACT_DOCUMENT_TYPE } from '../components/agent/artifacts/artifactTypography'
 import { toolbarDensity } from '../components/agent/artifacts/toolbarDensity'
-import { useArtifactShare } from '../components/agent/artifacts/useArtifactShare'
 import {
   useArtifactLine,
   usePickedArtifactVersion,
 } from '../components/agent/artifacts/useSessionArtifacts'
 import { MessageResponse } from '../components/agent/MessageResponse'
+import { agentArtifactUrl } from '../components/agent/sessionUrl'
 import { EmptyState } from '../components/EmptyState'
 import { useWorkspaceTab } from '../hooks/useWorkspaceTab'
 import { ARTIFACT_PAGE, pickArtifactVersion } from '../lib/sessionArtifacts'
@@ -49,7 +49,10 @@ export function ArtifactView({
   const picked = usePickedArtifactVersion(conversationId, artifactId)
   const current = line.find((entry) => entry.version === picked) ?? line.at(-1)
   const [view, setView] = useState<ArtifactViewMode>('preview')
-  const share = useArtifactShare(teamId, conversationId, artifactId)
+  const link =
+    current && conversationId
+      ? agentArtifactUrl(teamId, conversationId, artifactId, current.version)
+      : null
   const [errors, setErrors] = useState<FrameErrors | null>(null)
   const Icon = current ? KIND_ICONS[current.kind] : Shapes
   const [pane, width] = usePaneWidth()
@@ -80,7 +83,7 @@ export function ArtifactView({
             current={current}
             view={view}
             errors={errors?.version === current.version ? errors.messages : []}
-            share={share}
+            link={link}
             onView={setView}
             onStep={(next) => {
               if (!conversationId) return

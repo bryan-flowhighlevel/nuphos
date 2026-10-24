@@ -105,7 +105,7 @@ export function MoreMenu({
         <MenuItem
           icon={<Download className="size-3.5" />}
           hint={artifactFileName(current)}
-          onClick={() => downloadArtifact(current)}
+          onClick={() => void downloadArtifact(current)}
         >
           Download
         </MenuItem>

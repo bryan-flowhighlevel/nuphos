@@ -1,7 +1,6 @@
 import * as agent from '../agent'
 
 import type { GeneralAccess, ParticipantRole } from '../../src/api/agent-types'
-import type { ArtifactShareInput } from '../../src/api/artifact-share-types'
 
 // Conversation-level channels that no longer fit in channels-agent.ts (max-lines).
 export const agentReadChannels = {
@@ -49,19 +48,4 @@ export const agentReadChannels = {
     avatar: string | null,
     teamId?: string,
   ) => agent.setConversationAvatar(sessionId, avatar, teamId),
-  'agent:getArtifactShare': (_e: unknown, sessionId: string, artifactId: string, teamId: string) =>
-    agent.getArtifactShare(sessionId, artifactId, teamId),
-  'agent:publishArtifactShare': (
-    _e: unknown,
-    sessionId: string,
-    artifactId: string,
-    teamId: string,
-    input: ArtifactShareInput,
-  ) => agent.publishArtifactShare(sessionId, artifactId, teamId, input),
-  'agent:unpublishArtifactShare': (
-    _e: unknown,
-    sessionId: string,
-    artifactId: string,
-    teamId: string,
-  ) => agent.unpublishArtifactShare(sessionId, artifactId, teamId),
 }

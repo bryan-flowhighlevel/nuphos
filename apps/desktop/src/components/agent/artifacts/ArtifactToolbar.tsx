@@ -14,7 +14,6 @@ import { MoreMenu, VersionStepper } from './ArtifactToolbarParts'
 
 import type { ArtifactVersion } from './artifactPayload'
 import type { ToolbarDensity } from './toolbarDensity'
-import type { ArtifactShareState } from './useArtifactShare'
 
 export type ArtifactViewMode = 'preview' | 'source'
 
@@ -30,7 +29,8 @@ export type ArtifactToolbarProps = {
   current: ArtifactVersion
   view: ArtifactViewMode
   errors: string[]
-  share: ArtifactShareState
+  /** The teammate link to this version; null when the chat isn't known yet. */
+  link: string | null
   onView: (view: ArtifactViewMode) => void
   onStep: (version: ArtifactVersion) => void
   onAskAgent: (prompt: string) => void
@@ -96,7 +96,7 @@ export function ArtifactToolbar(props: ArtifactToolbarProps) {
             )}
             <ArtifactShareButton
               current={current}
-              state={props.share}
+              link={props.link}
               iconOnly={density !== 'full'}
             />
           </div>,
@@ -167,7 +167,7 @@ function InlineActions({ current }: { current: ArtifactVersion }) {
           size="icon-sm"
           className="mr-1 h-7 w-7"
           aria-label="Download"
-          onClick={() => downloadArtifact(current)}
+          onClick={() => void downloadArtifact(current)}
         >
           <Download className="h-3.5 w-3.5" />
         </Button>

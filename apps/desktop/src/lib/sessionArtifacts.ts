@@ -143,3 +143,46 @@ export function pickArtifactVersion(
 export function artifactPagePath(teamId: string, artifactId: string): string {
   return `/teams/${encodeURIComponent(teamId)}/artifacts/${encodeURIComponent(artifactId)}`
 }
+
+/**
+ * Artifacts a link asked to open, by session: the version it pins, or null for
+ * the latest. A request waits until that session's chat is on screen and holds
+ * the artifact. The chat appears only for someone who can read the
+ * conversation, so for anyone else the request simply never fires.
+ */
+const requested = new Map<string, Map<string, number | null>>()
+
+export function requestArtifactOpen(sessionId: string, artifactId: string, version?: number): void {
+  const forSession = requested.get(sessionId) ?? new Map<string, number | null>()
+
+  forSession.set(artifactId, version ?? null)
+  requested.set(sessionId, forSession)
+  notify()
+}
+
+/**
+ * The first requested artifact this session's chat now holds, removed from
+ * the queue. A pinned version the line does not have opens the latest.
+ */
+export function takeRequestedArtifact(
+  sessionId: string,
+): { artifactId: string; version: number | null } | null {
+  const forSession = requested.get(sessionId)
+  const lines = bySession.get(sessionId)
+
+  if (!forSession || !lines) return null
+  for (const [artifactId, version] of forSession) {
+    const line = lines.get(artifactId)
+
+    if (!line?.length) continue
+    forSession.delete(artifactId)
+    if (forSession.size === 0) requested.delete(sessionId)
+
+    return {
+      artifactId,
+      version: version !== null && line.some((entry) => entry.version === version) ? version : null,
+    }
+  }
+
+  return null
+}

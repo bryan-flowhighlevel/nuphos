@@ -8,6 +8,8 @@ import {
   readArtifactCall,
   releaseSessionArtifacts,
   readArtifactLine,
+  requestArtifactOpen,
+  takeRequestedArtifact,
   readPickedArtifactVersion,
   subscribeSessionArtifacts,
 } from './sessionArtifacts.ts'
@@ -86,4 +88,33 @@ test('a chat is forgotten only when the last view of it leaves the screen', () =
 
 test('one dock path per artifact', () => {
   assert.equal(artifactPagePath('team1', 'q3-report'), '/teams/team1/artifacts/q3-report')
+})
+
+test('a link opens its artifact once the chat holds it, for someone who can read the chat', () => {
+  const owner = view()
+
+  requestArtifactOpen('member-chat', 'page', 1)
+  // Nothing to open until the conversation has loaded and shown its artifacts.
+  assert.equal(takeRequestedArtifact('member-chat'), null)
+  publishSessionArtifacts(owner, 'member-chat', new Map([['page', [v('m1', 1), v('m2', 2)]]]))
+  assert.deepEqual(takeRequestedArtifact('member-chat'), { artifactId: 'page', version: 1 })
+  // Taken once: opening the chat again later does not reopen it.
+  assert.equal(takeRequestedArtifact('member-chat'), null)
+  releaseSessionArtifacts(owner, 'member-chat')
+})
+
+test('a link to a chat the viewer cannot read never opens anything', () => {
+  // The conversation request is refused, so its chat never shows artifacts.
+  requestArtifactOpen('other-team-chat', 'page', 2)
+  assert.equal(takeRequestedArtifact('other-team-chat'), null)
+  assert.equal(readArtifactLine('other-team-chat', 'page'), undefined)
+})
+
+test('a pinned version the chat does not hold opens the latest instead', () => {
+  const owner = view()
+
+  requestArtifactOpen('s9', 'page', 7)
+  publishSessionArtifacts(owner, 's9', new Map([['page', [v('n1', 1)]]]))
+  assert.deepEqual(takeRequestedArtifact('s9'), { artifactId: 'page', version: null })
+  releaseSessionArtifacts(owner, 's9')
 })

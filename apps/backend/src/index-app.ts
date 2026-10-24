@@ -31,7 +31,6 @@ import { gitlabAppRoutes } from '@/routes/gitlab-app'
 import { health } from '@/routes/health'
 import { invitationsRoutes } from '@/routes/invitations'
 import { inviteLandingRoutes } from '@/routes/invite-landing'
-import { artifactPublicRoutes } from '@/routes/artifact-public'
 import { jiraAppRoutes } from '@/routes/jira-app'
 import { larkRoutes } from '@/routes/lark'
 import { linearAppRoutes } from '@/routes/linear-app'
@@ -115,7 +114,6 @@ app.route('/oauth', oauthRoutes)
 // Team-invitation email landing page (deep-links into the app, download
 // fallback). Unauthenticated by design — reached from an email click.
 app.route('/invite', inviteLandingRoutes)
-app.route('/artifact', artifactPublicRoutes)
 app.route('/github-app', githubAppRoutes)
 app.route('/gitlab-app', gitlabAppRoutes)
 app.route('/cloudflare-app', cloudflareAppRoutes)

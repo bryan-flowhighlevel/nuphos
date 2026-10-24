@@ -1,7 +1,6 @@
 import { ipcRenderer } from 'electron'
 
 import type { GeneralAccess, ParticipantRole } from '../../src/api/agent-types'
-import type { ArtifactShareInput } from '../../src/api/artifact-share-types'
 
 export const sessionAccessApi = {
   agentGetSessionResources: (sessionId: string, teamId: string) =>
@@ -29,14 +28,4 @@ export const sessionAccessApi = {
   ) => ipcRenderer.invoke('agent:setConversationGeneralAccess', sessionId, teamId, generalAccess),
   agentRemoveConversationParticipant: (sessionId: string, teamId: string, userId: string) =>
     ipcRenderer.invoke('agent:removeConversationParticipant', sessionId, teamId, userId),
-  agentGetArtifactShare: (sessionId: string, artifactId: string, teamId: string) =>
-    ipcRenderer.invoke('agent:getArtifactShare', sessionId, artifactId, teamId),
-  agentPublishArtifactShare: (
-    sessionId: string,
-    artifactId: string,
-    teamId: string,
-    input: ArtifactShareInput,
-  ) => ipcRenderer.invoke('agent:publishArtifactShare', sessionId, artifactId, teamId, input),
-  agentUnpublishArtifactShare: (sessionId: string, artifactId: string, teamId: string) =>
-    ipcRenderer.invoke('agent:unpublishArtifactShare', sessionId, artifactId, teamId),
 }

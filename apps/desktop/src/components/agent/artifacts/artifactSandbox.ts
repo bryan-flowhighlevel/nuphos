@@ -33,9 +33,9 @@ else if(/^javascript:/i.test(href)){event.preventDefault()}
   return `<base target="_blank"><script>${script}</script>`
 }
 
-// Same as the share page's raw documents (backend artifact-share-documents.ts):
-// a viewport when the page brought none, and defaults that keep media inside a
-// narrow pane. :where() gives them no specificity, so the artifact's rules win.
+// A viewport when the page brought none, and defaults that keep media inside a
+// narrow pane or a phone screen. :where() gives them no specificity, so the
+// artifact's rules win. The downloaded file (artifactExport.ts) gets them too.
 const VIEWPORT =
   '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
 const RESPONSIVE_DEFAULTS =
@@ -53,10 +53,13 @@ const PROLOGUE = new RegExp(
   'i',
 )
 
-/** The artifact's markup with the bootstrap ahead of everything it loads. */
-export function artifactSrcDoc(html: string, channel: string): string {
+/**
+ * The artifact's markup with `head` ahead of everything it loads, after a
+ * charset, a viewport if it brought none, and the responsive defaults.
+ */
+export function withArtifactHead(html: string, head: string): string {
   const viewport = HAS_VIEWPORT.test(html) ? '' : VIEWPORT
-  const boot = `<meta charset="utf-8">${viewport}${RESPONSIVE_DEFAULTS}${bootstrap(channel)}`
+  const boot = `<meta charset="utf-8">${viewport}${RESPONSIVE_DEFAULTS}${head}`
   const prologue = PROLOGUE.exec(html)
   const [opening = '', doctype, openHtml, openHead] = prologue ?? []
   const rest = html.slice(opening.length)
@@ -66,6 +69,11 @@ export function artifactSrcDoc(html: string, channel: string): string {
 
   // A fragment: give it a document, so it renders in standards mode.
   return `<!doctype html><html><head>${boot}</head><body>${html}</body></html>`
+}
+
+/** The artifact's markup with the bootstrap ahead of everything it loads. */
+export function artifactSrcDoc(html: string, channel: string): string {
+  return withArtifactHead(html, bootstrap(channel))
 }
 
 export function readArtifactFrameMessage(

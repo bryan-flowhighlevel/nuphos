@@ -39,32 +39,6 @@ export function coreConfig() {
       // Browser-facing OAuth authorize base (e.g. https://nuphos.ai, which
       // proxies /oauth/authorize* to the API). Empty = same as publicBaseUrl.
       oauthAuthorizeBaseUrl: optional('NUPHOS_OAUTH_AUTHORIZE_BASE_URL')?.replace(/\/$/, ''),
-      // Where published artifacts are served (e.g. https://nuphos-share.example):
-      // a separately registered domain pointed at this backend, so a shared page
-      // never borrows the product domain's trust. When set, /artifact/* answers
-      // only on this host and share links use it. Unset: HTML artifacts cannot
-      // be published; documents, code and SVG still can, from publicBaseUrl.
-      artifactPublicOrigin: (() => {
-        const raw = optional('ARTIFACT_PUBLIC_ORIGIN')
-
-        if (!raw) return undefined
-        let url: URL
-
-        try {
-          url = new URL(raw)
-        } catch {
-          throw new Error(
-            `ARTIFACT_PUBLIC_ORIGIN must be an origin like https://host (got: ${JSON.stringify(raw)})`,
-          )
-        }
-        if (!/^https?:$/.test(url.protocol) || url.pathname !== '/' || url.search || url.hash) {
-          throw new Error(
-            `ARTIFACT_PUBLIC_ORIGIN must be an origin like https://host (got: ${JSON.stringify(raw)})`,
-          )
-        }
-
-        return url.origin
-      })(),
       google: {
         clientId: optional('GOOGLE_OAUTH_CLIENT_ID'),
         clientSecret: optional('GOOGLE_OAUTH_CLIENT_SECRET'),

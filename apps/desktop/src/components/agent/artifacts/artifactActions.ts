@@ -1,7 +1,7 @@
 // What the artifact tab's toolbar does with a version.
 import { toast } from '../../ui/toast'
 
-import { artifactFileName, artifactMimeType } from './artifactPayload'
+import { exportArtifact } from './artifactExport'
 
 import type { ArtifactVersion } from './artifactPayload'
 
@@ -21,14 +21,42 @@ export async function copySource(version: ArtifactVersion) {
   }
 }
 
-export function downloadArtifact(version: ArtifactVersion) {
+/** Save the version as one self-contained file named after its title. */
+export async function downloadArtifact(version: ArtifactVersion) {
+  let file: Awaited<ReturnType<typeof exportArtifact>>
+
+  try {
+    file = await exportArtifact(version)
+  } catch {
+    toast.error('Could not prepare the download')
+
+    return
+  }
   const url = URL.createObjectURL(
-    new Blob([version.content], { type: `${artifactMimeType(version.kind)};charset=utf-8` }),
+    new Blob([file.content], { type: `${file.mimeType};charset=utf-8` }),
   )
   const anchor = document.createElement('a')
 
   anchor.href = url
-  anchor.download = artifactFileName(version)
+  anchor.download = file.fileName
   anchor.click()
   setTimeout(() => URL.revokeObjectURL(url), 30_000)
+  if (file.missing.length > 0) {
+    const count = file.missing.length
+
+    toast.error(
+      `Saved without ${String(count)} ${count === 1 ? 'thing' : 'things'} it loads from the web`,
+      `Parts of ${file.fileName} may not work offline: ${file.missing.slice(0, 3).join(', ')}${count > 3 ? '…' : ''}`,
+    )
+  }
+}
+
+/** Copy a link that opens the artifact in Nuphos for anyone who can see its chat. */
+export async function copyArtifactLink(url: string) {
+  try {
+    await navigator.clipboard.writeText(url)
+    toast.success('Link copied', 'Teammates who can open this chat will see the artifact.')
+  } catch {
+    toast.error('Could not copy the link')
+  }
 }
