@@ -155,7 +155,7 @@ export type PlayOnce = { play: () => void; dispose: () => void }
 
 /**
  * Plays the loop once per `play()`: `build` makes a fresh URL, `onChange` gets it, and
- * after one loop gets undefined again and the URL is revoked. A play while one is
+ * after one loop, or on `dispose()`, gets undefined again and the URL is revoked. A play while one is
  * running is ignored, so pointer jitter never restarts it.
  */
 export function createPlayOnce(
@@ -209,8 +209,12 @@ export function createPlayOnce(
     dispose() {
       disposed = true
       cancel?.()
-      if (shown) revoke(shown)
+      if (!shown) return
+      // Whoever showed the copy must drop it too: a revoked URL left in an <img> is a
+      // broken image, and it comes back if the same character is shown again.
+      revoke(shown)
       shown = undefined
+      onChange(undefined)
     },
   }
 }

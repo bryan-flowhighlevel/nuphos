@@ -113,3 +113,22 @@ test('a play whose copy could not load stays still and can try again', async () 
   await settle()
   assert.deepEqual(shown, ['blob:ok'])
 })
+
+test('disposing mid-play takes the revoked copy back, so it never shows as a broken image', async () => {
+  const shown: (string | undefined)[] = []
+  const revoked: string[] = []
+  const player = createPlayOnce(
+    async () => 'blob:playing',
+    (url) => shown.push(url),
+    { revoke: (url) => revoked.push(url), schedule: () => keepTimer },
+  )
+
+  player.play()
+  await settle()
+  // The character changes mid-play (a preview, a new pick): the image is disposed.
+  player.dispose()
+  assert.deepEqual(revoked, ['blob:playing'])
+  assert.deepEqual(shown, ['blob:playing', undefined], 'the revoked URL is withdrawn')
+  player.dispose()
+  assert.deepEqual(shown, ['blob:playing', undefined], 'disposing twice changes nothing')
+})
