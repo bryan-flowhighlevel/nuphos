@@ -9,7 +9,8 @@ import { notifyPendingPick, usePendingPick } from './usePendingPick'
 import type { ProfileCharacter, UserInfo } from '../types'
 
 export type PickNote =
-  { kind: 'saved' | 'kept-here'; text: string } | { kind: 'failed'; character: ProfileCharacter }
+  | { kind: 'saved' | 'kept-here'; text: string }
+  | { kind: 'failed'; character: ProfileCharacter | null }
 
 /**
  * Picks show at once and are kept on this computer until the server takes them. A
@@ -19,11 +20,15 @@ export type PickNote =
 export function useCharacterPick(user: UserInfo, onUserUpdated: (user: UserInfo) => void) {
   const pending = usePendingPick(user.id)
   const [note, setNote] = useState<PickNote | null>(null)
-  const latest = useRef<ProfileCharacter | null>(null)
+  const latest = useRef<ProfileCharacter | null | undefined>(undefined)
 
-  async function pick(next: ProfileCharacter) {
+  /** A character, or null for none: the person's photo again. */
+  async function pick(next: ProfileCharacter | null) {
     latest.current = next
-    const outcome = savePick(next, user.id, { storage: localStorage, send: api.authSetCharacter })
+    const outcome = savePick(next ?? 'photo', user.id, {
+      storage: localStorage,
+      send: api.authSetCharacter,
+    })
 
     notifyPendingPick()
     const result = await outcome
@@ -32,7 +37,10 @@ export function useCharacterPick(user: UserInfo, onUserUpdated: (user: UserInfo)
     if (latest.current !== next) return
     if (result.kind === 'saved') onUserUpdated(result.user)
     if (result.kind === 'saved')
-      setNote({ kind: 'saved', text: `Saved · ${profileCharacterLabel(next)}` })
+      setNote({
+        kind: 'saved',
+        text: next ? `Saved · ${profileCharacterLabel(next)}` : 'Saved · your photo',
+      })
     else if (result.kind === 'kept-here')
       setNote({ kind: 'kept-here', text: 'Saved on this computer' })
     else setNote({ kind: 'failed', character: next })
@@ -43,7 +51,7 @@ export function useCharacterPick(user: UserInfo, onUserUpdated: (user: UserInfo)
     const waiting = pendingPick(localStorage, user.id)
 
     if (!waiting) return
-    if (waiting === user.character) {
+    if (waiting === (user.character ?? 'photo')) {
       localStorage.removeItem(pendingPickKey(user.id))
       notifyPendingPick()
 

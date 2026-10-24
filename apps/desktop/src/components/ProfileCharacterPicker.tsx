@@ -16,6 +16,9 @@ import type { ProfileLook } from '../lib/profileCharacter'
 import type { ProfileCharacter } from '../types'
 import type React from 'react'
 
+/** Boy, Girl, then None: the person's own photo, which is also what shows before a pick. */
+const LOOK_OPTIONS: readonly (ProfileLook | 'none')[] = [...PROFILE_LOOKS, 'none']
+
 const STEPS: Partial<Record<string, number>> = {
   ArrowRight: 1,
   ArrowDown: 1,
@@ -34,8 +37,8 @@ function arrowTarget(event: React.KeyboardEvent, count: number, index: number): 
 }
 
 /**
- * Two steps: Boy or Girl, then one of that look's three hairstyles. A first
- * pick shows step 1 only. Switching look keeps the hairstyle slot, so the ring
+ * Two steps: Boy, Girl or None, then one of that look's three hairstyles. None (the
+ * person's own photo) is the default, and then only step 1 shows. Switching look keeps the hairstyle slot, so the ring
  * always shows someone. Hover or arrow keys preview a hairstyle in the ring;
  * Escape or leaving the row puts the saved one back. The buttons stay enabled
  * while a pick saves, so keyboard focus is never dropped; the card ignores
@@ -47,23 +50,26 @@ export function ProfileCharacterPicker({
   onPreview,
 }: {
   value: ProfileCharacter | undefined
-  onPick: (character: ProfileCharacter) => void
+  /** A character, or null for none: the person's own photo. */
+  onPick: (character: ProfileCharacter | null) => void
   onPreview: (character: ProfileCharacter | null) => void
 }) {
   const look = value ? profileLook(value) : undefined
   const looks = useRef<(HTMLButtonElement | null)[]>([])
   const tiles = useRef<(HTMLButtonElement | null)[]>([])
 
-  function pickLook(next: ProfileLook) {
-    if (next !== look) onPick(characterForLook(next, value))
+  function pickLook(next: ProfileLook | 'none') {
+    if (next === 'none') {
+      if (value) onPick(null)
+    } else if (next !== look) onPick(characterForLook(next, value))
   }
 
   function moveLook(event: React.KeyboardEvent, index: number) {
-    const next = arrowTarget(event, PROFILE_LOOKS.length, index)
+    const next = arrowTarget(event, LOOK_OPTIONS.length, index)
 
     if (next === undefined) return
     looks.current[next]?.focus()
-    pickLook(PROFILE_LOOKS[next])
+    pickLook(LOOK_OPTIONS[next])
   }
 
   function moveHair(
@@ -91,11 +97,11 @@ export function ProfileCharacterPicker({
         <span className="w-14 text-[12.5px] text-tertiary">1 · You</span>
         <div
           role="radiogroup"
-          aria-label="Boy or girl"
+          aria-label="Boy, girl or none"
           className="inline-flex rounded-lg border border-zGray-800 bg-surface p-0.5"
         >
-          {PROFILE_LOOKS.map((option, index) => {
-            const selected = option === look
+          {LOOK_OPTIONS.map((option, index) => {
+            const selected = option === 'none' ? !look : option === look
 
             return (
               <button
@@ -106,7 +112,7 @@ export function ProfileCharacterPicker({
                 type="button"
                 role="radio"
                 aria-checked={selected}
-                tabIndex={selected || (!look && index === 0) ? 0 : -1}
+                tabIndex={selected ? 0 : -1}
                 onClick={() => pickLook(option)}
                 onKeyDown={(event) => moveLook(event, index)}
                 className={clsx(
@@ -116,7 +122,7 @@ export function ProfileCharacterPicker({
                     : 'text-secondary hover:text-main',
                 )}
               >
-                {profileLookLabel(option)}
+                {option === 'none' ? 'None' : profileLookLabel(option)}
               </button>
             )
           })}

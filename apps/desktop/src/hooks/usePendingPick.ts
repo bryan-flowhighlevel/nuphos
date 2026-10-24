@@ -2,8 +2,7 @@ import { useSyncExternalStore } from 'react'
 
 import { CHARACTER_SLOT, pendingValue } from '../lib/profilePickSync'
 
-import type { PickSlot } from '../lib/profilePickSync'
-import type { ProfileCharacter } from '../types'
+import type { PickSlot, PictureChoice } from '../lib/profilePickSync'
 
 const listeners = new Set<() => void>()
 
@@ -34,6 +33,6 @@ export function usePendingValue<T extends string>(
   return useSyncExternalStore(subscribe, () => pendingValue(slot, localStorage, userId))
 }
 
-export function usePendingPick(userId: string): ProfileCharacter | undefined {
+export function usePendingPick(userId: string): PictureChoice | undefined {
   return usePendingValue(CHARACTER_SLOT, userId)
 }

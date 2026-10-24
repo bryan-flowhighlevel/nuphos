@@ -13,9 +13,12 @@ export type PickStorage = {
 /** One thing the person picks for their own sidebar, saved on their account. */
 export type PickSlot<T extends string> = { name: string; values: readonly T[] }
 
-export const CHARACTER_SLOT: PickSlot<ProfileCharacter> = {
+/** A character, or `photo` for none: the person's own photo (or initials) again. */
+export type PictureChoice = ProfileCharacter | 'photo'
+
+export const CHARACTER_SLOT: PickSlot<PictureChoice> = {
   name: 'profileCharacter',
-  values: PROFILE_CHARACTERS,
+  values: [...PROFILE_CHARACTERS, 'photo'],
 }
 
 export const BADGE_STAT_SLOT: PickSlot<BadgeStat> = { name: 'badgeStat', values: BADGE_STATS }
@@ -39,15 +42,17 @@ export function pendingPickKey(userId: string): string {
   return pendingKey(CHARACTER_SLOT, userId)
 }
 
-export function pendingPick(storage: PickStorage, userId: string): ProfileCharacter | undefined {
+export function pendingPick(storage: PickStorage, userId: string): PictureChoice | undefined {
   return pendingValue(CHARACTER_SLOT, storage, userId)
 }
 
-/** What the ring shows: a pick still waiting on this computer, else the saved one. */
+/** The character to show: a pick still waiting on this computer, else the saved one. */
 export function shownCharacter(
   user: UserInfo,
-  pending: ProfileCharacter | undefined,
+  pending: PictureChoice | undefined,
 ): ProfileCharacter | undefined {
+  if (pending === 'photo') return undefined
+
   return pending ?? user.character
 }
 
@@ -82,10 +87,17 @@ export async function saveValue<T extends string>(
   }
 }
 
+/** Saves a character, or `photo` to clear it, which the server takes as null. */
 export function savePick(
-  character: ProfileCharacter,
+  choice: PictureChoice,
   userId: string,
-  deps: { storage: PickStorage; send: (character: ProfileCharacter) => Promise<ProfileSaveResult> },
+  deps: {
+    storage: PickStorage
+    send: (character: ProfileCharacter | null) => Promise<ProfileSaveResult>
+  },
 ): Promise<SaveOutcome> {
-  return saveValue(CHARACTER_SLOT, character, userId, deps)
+  return saveValue(CHARACTER_SLOT, choice, userId, {
+    storage: deps.storage,
+    send: (value) => deps.send(value === 'photo' ? null : value),
+  })
 }

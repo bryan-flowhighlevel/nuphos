@@ -26,7 +26,7 @@ function memory(): PickStorage & { data: Map<string, string> } {
   }
 }
 
-const answer = (result: ProfileSaveResult | Error) => async (_c: ProfileCharacter) => {
+const answer = (result: ProfileSaveResult | Error) => async (_c: ProfileCharacter | null) => {
   if (result instanceof Error) throw result
 
   return result
@@ -100,4 +100,31 @@ test('the badge stat is kept and synced the same way, under its own key', async 
     undefined,
     'an unknown stat is ignored',
   )
+})
+
+test('None goes back to the photo: the server is sent null and nothing shows as a character', async () => {
+  const storage = memory()
+  const sent: (ProfileCharacter | null)[] = []
+  const cleared = { ...user }
+
+  const kept = await savePick('photo', 'u1', {
+    storage,
+    send: async (character) => {
+      sent.push(character)
+
+      return { unsupported: true }
+    },
+  })
+
+  assert.deepEqual(kept, { kind: 'kept-here' })
+  assert.deepEqual(sent, [null])
+  assert.equal(pendingPick(storage, 'u1'), 'photo')
+  // A pending None hides a saved character until the server catches up.
+  assert.equal(shownCharacter({ ...user, character: 'boy-fringe' }, 'photo'), undefined)
+  assert.equal(shownCharacter(user, undefined), undefined, 'no pick is the photo too')
+
+  const saved = await savePick('photo', 'u1', { storage, send: async () => ({ user: cleared }) })
+
+  assert.deepEqual(saved, { kind: 'saved', user: cleared })
+  assert.equal(pendingPick(storage, 'u1'), undefined)
 })
