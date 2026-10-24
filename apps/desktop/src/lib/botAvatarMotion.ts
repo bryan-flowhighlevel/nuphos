@@ -147,11 +147,6 @@ export async function playOnceSvgUrl(src: string): Promise<string | undefined> {
   return svg === false ? undefined : svgUrl(withIdleMotion(svg, 0, '1'))
 }
 
-/** A fresh copy of a character that plays the loop once from the start. */
-export function playOnceBotAvatarUrl(file: BotAvatarFile): Promise<string | undefined> {
-  return playOnceSvgUrl(botAvatarSrc(file))
-}
-
 function svgUrl(svg: string): string {
   return URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }))
 }
